@@ -2,7 +2,9 @@
 title: "init"
 author: "Nate Thomas"
 date: "1/17/2022"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ```{r}
@@ -11,6 +13,7 @@ library(skedastic)
 library(lubridate)
 library(rvest)
 library(readxl)
+library(moments)
 ```
 
 # Initalialization 
@@ -30,126 +33,176 @@ df <- commodity %>% select(Date,`Industrial Inputs Price Index`) %>%
 plot(df$Date,df$iipi)
 ```
 
+# Data Set review and assessment
+
 ## Time Series decomposition
 
 ```{r}
 df.ts <- ts(df$iipi, start=c(1980,1), frequency = 12)
-class(df.ts)
 
 plot(aggregate(df.ts))
 plot(decompose(df.ts))
 ```
 
-## White Noise Process Confirmation
+## White Noise Process Evaluation
 
-Criteria 1: autocorrelation
 The Ljung-Box Q-statistic Test is used to confirm existence of autocorrelation within the commodity index.
 
 ```{r}
-Box.test(df$iipi,lag=430)
+Box.test(df$iipi,lag=36)
 ```
 
+H0: All autocorrelctions are zero (0)
+
+Ha: at least one (1) autocorrelation is not zero (0)
+
+The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero.
+
+```{r}
+acf(df$iipi, lag.max=36)
+```
+
+Based on the autocorrelation chart displayed one can be confident that there exists autocorrelation to a great degree, across the three years of lag values shown.
+
+Therefore one can safely conclude that this is not a white noise process.
+
+
+
+In reviewing the possibility of constant mean, to conclude that the time series data is a white noise process one can create a linear model with respect to time and assess the the t-test of the slope coefficient. If this is a non-zero value, no further action is required, as this definitionally determines that this is not a constant mean process.  However, one must assume that the residuals are t-distributed for this to hold for simple linear regression.
+
+```{r}
+slm <- lm(iipi~Date, data = df)
+summary(slm)
+```
+
+For to confirm the residual normality assumption, the Shapiro-Wilks test is performed:
+
+```{r}
+shapiro.test(rstandard(slm))
+hist(rstandard(slm),breaks=20, col="steelblue")
+```
+
+H0: The residuals are normally distributed.
+Ha: The residuals are not normally distributed.
+
+The residuals are not normally distributed, as seen in the Shapiro-Wilk test and associated histogram, above for the simple linear regression with respect to time.
+
+Ljung-Box Q-statistic Test is used to confirm existence of autocorrelation within the residuals of commodity index function with respect to time. 
+
+```{r}
+Box.test(rstandard(slm), lag=36)
+```
 H0: All autocorrelctions are zero (0)
 Ha: at least one (1) autocorrelation is not zero (0)
 
 The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero.
 
 ```{r}
-acf(df$iipi, lag.max=430)
+acf(rstandard(slm))
 ```
 
-Based on the autocorrelation table displayed one can be confident that there exists autocorrelation to a great degree, across a large number of lag values.
+The autocorrolation function chart shown above indicates that the residuals of the commodity index model with respect to time are strongly autocorrelated to one another. 
 
-Therefore one can safely conclude that this is not a white noise process.  The constant mean, and constant variance tests are performed as well for completeness.
-
-First, informally observing the data to see if it is approximately normally distributed:
-
-```{r}
-df$iipi %>% hist()
-```
-
-The data does not appear, subjectively, to be normally distributed.  Further indicating this is not a white noise process.  This if formally confirmed using the Shapiro-Whilk Normality Test:
-
-```{r}
-shapiro.test(df$iipi)
-```
-
-H0: Series are normally distributed.
-Ha: Series are not normally distributed.
-
-The test indicates one can safely reject the null hypothesis (H0) - such that the data is not normally distributed.
-
-As additional verification, a linear model is estimated of commodity index of interest as a function of series date.  
-
-```{r}
-slm <- lm(iipi~Date, data = df)
-summary(slm)
-```
-The purpose of this reasoning is that if the slope estimate is shown to be statistically non-zero while as a special case, then one can be confident that the mean is not constant across time. This work acknowledges that if the test fails to confirm a non-zero value it does not indicate definitively that the data is white noise.  For example pure sine waves, when averaged across multiple periods, tend to a mean of zero, though sine wave are clearly not white noise.  The test above, shows clearly that the date is a linear function of time, and therefore the commodity index does not have a constant mean. 
-
-Finally, White's Test for heteroscedasticity is performed. This is accomplished by creating a constant value linear model (such that the only estimated parameter is the intercept).  Using this model, and the understanding that the sum of the squared residuals are equivalent to the variance, one can then leverage White's Test on the model to confirm the constant variance criteria:
+Finally, White's Test for heteroscedasticity is performed on the model residuals to test for constant variance:
 
 ```{r}
 white_lm(slm)
 ```
 
-## First Difference White Noise Process
+H0: There is no heteroscedasticity.
+Ha: There is heteroscedasticity.
+
+Based on the p-value above, the residuals of the model with respect to time have non-constant variance.
+
+# First Difference White Noise Process Evaluation
 
 ```{r}
 df <- df %>% 
-  mutate(iipi_dif = iipi - lag(iipi))
+  mutate(iipi_dif = iipi - lag(iipi)) %>%
+  drop_na()
 ```
 
-Criteria 1: autocorrelation
+## Time Series decomposition
+
+```{r}
+df_dif.ts <- ts(df$iipi_dif, start=c(1980,1), frequency = 12)
+
+plot(aggregate(df_dif.ts))
+plot(decompose(df_dif.ts))
+```
+
 The Ljung-Box Q-statistic Test is used to confirm existence of autocorrelation within the commodity index first difference.
 
 ```{r}
-Box.test(df$iipi_dif,lag=30)
+Box.test(df$iipi_dif,lag=36)
 ```
 
 H0: All autocorrelctions are zero (0)
+
 Ha: at least one (1) autocorrelation is not zero (0)
 
 The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero.
 
 ```{r}
-acf(df %>% drop_na() %>% select(iipi_dif), lag.max=30)
+acf(df$iipi_dif, lag.max=36)
 ```
 
-Based on the autocorrelation table displayed one can be confident that there exists autocorrelation to a great degree, across a large number of lag values.
+Based on the autocorrelation chart displayed one can be confident that there exists much reduced autocorrelation compared to the original dataset.  This however, is not a randomm walk process, as there are autocorrelations at lag values equal to 1 and 2.
 
-Therefore one can safely conclude that this is not a white noise process.  The constant mean, and constant variance tests are performed as well for completeness.
+Therefore one is able to conclude that this is not a white noise process, though the evidence.  
 
-First, informally observing the data to see if it is approximately normally distributed:
+Again, a simple linear regression model with respect to time is created to test for contstant mean.  This, again, is preconditioned on the assumption that the residuals are normal.
 
 ```{r}
-df$iipi %>% hist()
+slm_dif <- lm(iipi_dif~Date, data = df)
+summary(slm_dif)
 ```
 
-The data does not appear, subjectively, to be normally distributed.  Further indicating this is not a white noise process.  This if formally confirmed using the Shapiro-Whilk Normality Test:
+The Shapiro-Wilks test is performed to confirm if the residuals are normally distributed:
 
 ```{r}
-shapiro.test(df$iipi)
+shapiro.test(rstandard(slm_dif))
+hist(rstandard(slm_dif),breaks=20, col="steelblue")
 ```
 
-H0: Series are normally distributed.
-Ha: Series are not normally distributed.
+H0: The residuals are normally distributed.
+Ha: The residuals are not normally distributed.
 
-The test indicates one can safely reject the null hypothesis (H0) - such that the data is not normally distributed.
+The residuals are not normally distributed, as seen in the Shapiro-Wilk test and associated histogram, above.
 
-As additional verification, a linear model is estimated of commodity index of interest as a function of series date.  
+Ljung-Box Q-statistic Test is used to confirm existence of autocorrelation within the residuals of commodity index function with respect to time. 
 
 ```{r}
-slm <- lm(iipi~Date, data = df)
-summary(slm)
+Box.test(rstandard(slm_dif), lag=36)
 ```
-The purpose of this reasoning is that if the slope estimate is shown to be statistically non-zero while as a special case, then one can be confident that the mean is not constant across time. This work acknowledges that if the test fails to confirm a non-zero value it does not indicate definitively that the data is white noise.  For example pure sine waves, when averaged across multiple periods, tend to a mean of zero, though sine wave are clearly not white noise.  The test above, shows clearly that the date is a linear function of time, and therefore the commodity index does not have a constant mean. 
+H0: All autocorrelctions are zero (0)
+Ha: At least one (1) autocorrelation is not zero (0)
 
-Finally, White's Test for heteroscedasticity is performed. This is accomplished by creating a constant value linear model (such that the only estimated parameter is the intercept).  Using this model, and the understanding that the sum of the squared residuals are equivalent to the variance, one can then leverage White's Test on the model to confirm the constant variance criteria:
+The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero.
 
 ```{r}
-white_lm(slm)
+acf(rstandard(slm_dif))
 ```
+
+The autocorrolation function chart shown above indicates that the residuals of the commodity index model with respect to time are  autocorrelated at lag 1 and 2. 
+
+Finally, White's Test for heteroscedasticity is performed on the model residuals to test for constant variance:
+
+```{r}
+white_lm(slm_dif)
+```
+
+H0: There is no heteroscedasticity.
+Ha: There is heteroscedasticity.
+
+Based on the p-value above, the residuals of the model with respect to time have non-constant variance.
+
+
+
+
+
+
+
 
 # Predictors
 
