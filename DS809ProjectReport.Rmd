@@ -7,7 +7,8 @@ output: word_document
 
 ```{r echo = FALSE, message=FALSE, results='hide'}
 load('.RData')
-invisible(library(dplyr))
+library(dplyr)
+library(car)
 ```
 
 # Introduction and Overview
@@ -56,7 +57,7 @@ To show then that a series is not a WNP one must simply prove at least one of th
 
 ### IIPI White Noise Rejection
 
-The Ljung-Box Q-statistic Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months):
+The Box-Pierce Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months):
 
 Hypothesis: 
 
@@ -64,7 +65,7 @@ H0: All autocorrelctions are zero (0)
 
 Ha: At least one (1) autocorrelation is not zero (0) 
 
-```{r}
+```{r echo = FALSE}
 Box.test(df$IIPI,lag=36)
 ```
 
@@ -72,7 +73,7 @@ The test indicates one can safely reject the null hypothesis (H0) - such that at
 
 This is also seen through visual inspection of the ACF chart:
 
-```{r}
+```{r echo = FALSE}
 acf(df$IIPI, lag.max=36)
 ```
 
@@ -80,7 +81,7 @@ Based on the autocorrelation chart displayed one can be confident that there exi
 
 ### IIPI First Difference White Noise Process Rejection
 
-Again, the Ljung-Box Q-statistic Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months):
+Again, the Box-Pierce Q-statistic Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months):
 
 Hypothesis: 
 
@@ -88,7 +89,7 @@ H0: All autocorrelctions are zero (0)
 
 Ha: At least one (1) autocorrelation is not zero (0) 
 
-```{r}
+```{r echo = FALSE}
 Box.test(df$IIPI_dif,lag=36)
 ```
 
@@ -96,7 +97,7 @@ The test indicates one can safely reject the null hypothesis (H0) - such that at
 
 This is also seen through visual inspection of the ACF chart:
 
-```{r}
+```{r echo = FALSE}
 acf(df$IIPI_dif, lag.max=36)
 ```
 
@@ -104,7 +105,7 @@ acf(df$IIPI_dif, lag.max=36)
 
 The data was decomposed using native R *stats* package and to visually assess the potential time series affects of IIPI.
 
-```{r}
+```{r echo = FALSE}
 plot(decompose(df.ts))
 ```
 
@@ -122,14 +123,42 @@ mlm.ts$coefficients
 
 The summary output results from the estimated model.
 
-```{r}
+```{r echo = FALSE}
 summary(mlm.ts)
 ```
 
-...
+First, before assessing the validity of the residual assumtions variance inflation factors are computed to identify any multi-collinearities.
+
+```{r echo = FALSE}
+vif(mlm.ts)
+```
+
+Ten (10) is the typically accepted subjective value at which a variance inflation factor is considered high.  GDP, IndPro and M2 all exceed this limit.
+
+A new linear model is therefore estimated without GDP:
+
+```{r echo =FALSE}
+summary(mlm.ts1)
+```
+
+Multi-collinearity is assessed for the updated model, with the resutling variance inflation factors:
+
+```{r echo = FALSE}
+vif(mlm.ts1)
+```
+
+```{r}
+
+```
+
 
 Estimate a multiple linear regression model and discuss the significance of the coefficients. 
 Check multi-collinearity and check if the residual assumptions (normality, non-constant variance,
 and autocorrelation) are violated. 
 
+Intercept is the expected value of IIPI when all independent variables are zero (0)...
+Coefficients, given ceteris paribus, are the expected increase / decrease of IIPI 
+
+
+Plot data vs. model fit... example slide 44...
 

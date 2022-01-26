@@ -360,10 +360,13 @@ df <- left_join(df, recesssion, by = c('Date_form','Year','Month'))
 
 df.ts.modelset <- df %>% select(-c(Year,Month,IIPI_dif)) %>% drop_na()
 df.ts.modelset
+
+df.ts.modelset.test <- df.ts.modelset[424:433,]
+df.ts.modelset.train <- df.ts.modelset[1:423,]
 ```
 
 ```{r}
-mlm.ts <- lm(IIPI~., data = df.ts.modelset %>% select(-Date_form))
+mlm.ts <- lm(IIPI~., data = df.ts.modelset.train %>% select(-Date_form))
 summary(mlm.ts)
 
 round(mlm.ts$coefficients,3)
@@ -381,7 +384,7 @@ vif(mlm.ts)
 ```
 
 ```{r}
-mlm.ts1 <- lm(IIPI~., data = df.ts.modelset %>% select(-c(Date_form,GDP)))
+mlm.ts1 <- lm(IIPI~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP)))
 summary(mlm.ts1)
 ```
 
@@ -392,6 +395,26 @@ hist(rstandard(mlm.ts1),breaks=20, col="steelblue")
 
 ```{r}
 vif(mlm.ts1)
+```
+
+```{r}
+mlm.ts2 <- lm(IIPI~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro,TBillClose)))
+summary(mlm.ts2)
+```
+
+```{r}
+shapiro.test(rstandard(mlm.ts2))
+hist(rstandard(mlm.ts2),breaks=20, col="steelblue")
+```
+
+```{r}
+vif(mlm.ts2)
+```
+```{r}
+predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro,TBillClose)), interval="prediction")
+```
+```{r}
+df.ts.modelset.test$IIPI
 ```
 
 ```{r}
