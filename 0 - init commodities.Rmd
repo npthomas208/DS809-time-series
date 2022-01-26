@@ -14,6 +14,8 @@ library(lubridate)
 library(rvest)
 library(readxl)
 library(moments)
+library(car)
+library(ggplot2)
 ```
 
 # Initalialization 
@@ -22,15 +24,25 @@ Source:
 https://www.kaggle.com/vagifa/usa-commodity-prices?select=commodity-prices-2016.csv
 
 ```{r}
-commodity <- read_csv('../DataSet/commodity prices/commodity-prices-2016.csv') %>% as_tibble()
+commodity2016 <- read_csv('../DataSet/commodity prices/commodity-prices-2016.csv') %>% as_tibble()
 
-df <- commodity %>% select(Date,`Industrial Inputs Price Index`) %>% 
-  mutate(Date = as.Date(Date, format = "%m/%d/%Y"),
-         Year = year(Date),
-         Month = month(Date, abbr = FALSE),
-         iipi = `Industrial Inputs Price Index`)
+df <- commodity2016 %>% select(Date,`Industrial Inputs Price Index`) %>% 
+  mutate(Date_form = as.Date(Date, format = "%m/%d/%Y"),
+         Year = year(Date_form),
+         Month = month(Date_form, abbr = FALSE),
+         IIPI = `Industrial Inputs Price Index`) %>%
+  select(Date_form,Year,Month,IIPI)
 
-plot(df$Date,df$iipi)
+plot(df$Date_form,df$IIPI)
+```
+
+```{r}
+p1 <- df %>% 
+  ggplot(aes(x = Date_form, y = IIPI)) +
+  geom_point() +
+  labs(title = 'IIPI from 1980 to 2016',
+        x = 'Year of observation',
+        y = 'IIPI')
 ```
 
 # Data Set review and assessment
@@ -38,7 +50,7 @@ plot(df$Date,df$iipi)
 ## Time Series decomposition
 
 ```{r}
-df.ts <- ts(df$iipi, start=c(1980,1), frequency = 12)
+df.ts <- ts(df$IIPI, start=c(1980,1), frequency = 12)
 
 plot(aggregate(df.ts))
 plot(decompose(df.ts))
@@ -49,7 +61,7 @@ plot(decompose(df.ts))
 The Ljung-Box Q-statistic Test is used to confirm existence of autocorrelation within the commodity index.
 
 ```{r}
-Box.test(df$iipi,lag=36)
+Box.test(df$IIPI,lag=36)
 ```
 
 H0: All autocorrelctions are zero (0)
@@ -59,23 +71,21 @@ Ha: at least one (1) autocorrelation is not zero (0)
 The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero.
 
 ```{r}
-acf(df$iipi, lag.max=36)
+acf(df$IIPI, lag.max=36)
 ```
 
 Based on the autocorrelation chart displayed one can be confident that there exists autocorrelation to a great degree, across the three years of lag values shown.
 
 Therefore one can safely conclude that this is not a white noise process.
 
-
-
 In reviewing the possibility of constant mean, to conclude that the time series data is a white noise process one can create a linear model with respect to time and assess the the t-test of the slope coefficient. If this is a non-zero value, no further action is required, as this definitionally determines that this is not a constant mean process.  However, one must assume that the residuals are t-distributed for this to hold for simple linear regression.
 
 ```{r}
-slm <- lm(iipi~Date, data = df)
+slm <- lm(IIPI~Date_form, data = df)
 summary(slm)
 ```
 
-For to confirm the residual normality assumption, the Shapiro-Wilks test is performed:
+To confirm the residual normality assumption, the Shapiro-Wilks test is performed:
 
 ```{r}
 shapiro.test(rstandard(slm))
@@ -118,14 +128,14 @@ Based on the p-value above, the residuals of the model with respect to time have
 
 ```{r}
 df <- df %>% 
-  mutate(iipi_dif = iipi - lag(iipi)) %>%
+  mutate(IIPI_dif = IIPI - lag(IIPI)) %>%
   drop_na()
 ```
 
 ## Time Series decomposition
 
 ```{r}
-df_dif.ts <- ts(df$iipi_dif, start=c(1980,1), frequency = 12)
+df_dif.ts <- ts(df$IIPI_dif, start=c(1980,1), frequency = 12)
 
 plot(aggregate(df_dif.ts))
 plot(decompose(df_dif.ts))
@@ -134,7 +144,7 @@ plot(decompose(df_dif.ts))
 The Ljung-Box Q-statistic Test is used to confirm existence of autocorrelation within the commodity index first difference.
 
 ```{r}
-Box.test(df$iipi_dif,lag=36)
+Box.test(df$IIPI_dif,lag=36)
 ```
 
 H0: All autocorrelctions are zero (0)
@@ -144,7 +154,7 @@ Ha: at least one (1) autocorrelation is not zero (0)
 The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero.
 
 ```{r}
-acf(df$iipi_dif, lag.max=36)
+acf(df$IIPI_dif, lag.max=36)
 ```
 
 Based on the autocorrelation chart displayed one can be confident that there exists much reduced autocorrelation compared to the original dataset.  This however, is not a randomm walk process, as there are autocorrelations at lag values equal to 1 and 2.
@@ -154,7 +164,7 @@ Therefore one is able to conclude that this is not a white noise process, though
 Again, a simple linear regression model with respect to time is created to test for contstant mean.  This, again, is preconditioned on the assumption that the residuals are normal.
 
 ```{r}
-slm_dif <- lm(iipi_dif~Date, data = df)
+slm_dif <- lm(IIPI_dif~Date_form, data = df)
 summary(slm_dif)
 ```
 
@@ -197,13 +207,6 @@ Ha: There is heteroscedasticity.
 
 Based on the p-value above, the residuals of the model with respect to time have non-constant variance.
 
-
-
-
-
-
-
-
 # Predictors
 
 ## T-bill rate 
@@ -213,20 +216,22 @@ https://finance.yahoo.com/quote/%5EIRX/history?period1=317088000&period2=1453161
 
 ```{r}
 tbill <- read_csv('../DataSet/commodity prices/1-tbill13week.csv') %>% as_tibble() %>%
-  mutate(Date = as.Date(Date, format = "%m/%d/%Y"),
+  mutate(Date_form = as.Date(Date, format = "%m/%d/%Y"),
          Open = as.double(Open),
          High = as.double(High),
          Low = as.double(Low),
          Close = as.double(Close),
          AdjClose = as.double(`Adj Close`),
          Volume = as.double(Volume),
-         Month = month(Date),
-         Year = year(Date)) %>% 
+         Month = month(Date_form),
+         Year = year(Date_form)) %>% 
   drop_na() %>%
   group_by(Year,Month) %>%
-  summarise(Close = mean(Close))
+  summarise(TBillClose = mean(Close)) %>%
+  mutate(Date_form = as.Date(paste(Year,Month,"01",sep="-"))) %>%
+  select(Date_form,Year,Month,TBillClose)
   
-plot(tbill$Close)
+plot(tbill$TBillClose)
 ```
 
 ## GDP
@@ -234,14 +239,22 @@ plot(tbill$Close)
 https://fred.stlouisfed.org/series/BBKMGDP
 
 ```{r}
-gdp <- read_xls('../DataSet/commodity prices/2-BBKMGDP.xls', sheet = 'Sheet1') %>% as_tibble() %>%
-  mutate(Date = as.Date(observation_date, format = "%m/%d/%Y"),
-         Month = month(Date),
-         Year = year(Date)) %>%
-  select(Year, Month, BBKMGDP)
-gdp
+gdp <- read_csv('../DataSet/commodity prices/2-GDPC1.csv') %>% as_tibble() %>%
+  mutate(Date_form = as.Date(DATE, format = "%m/%d/%Y"),
+         Month = month(Date_form),
+         Year = year(Date_form),
+         GDP = GDPC1) %>%
+  select(Date_form,Year, Month, GDP)
 
-plot(gdp$BBKMGDP)
+gdp$Date_form[1]
+gdp$Date_form[length(gdp$Date_form)]
+seq.Date(gdp$Date_form[1], length.out = length(gdp$Date_form)*3-2, by = "month")
+
+gdp <- left_join(data_frame(Date_form=seq.Date(gdp$Date_form[1], length.out = length(gdp$Date_form)*3-2, by = "month")), gdp, by = 'Date_form') %>% 
+  fill(everything(), .direction = "down") %>%
+  mutate(Month = month(Date_form))
+
+plot(gdp$GDP)
 ```
 
 ## Inflation Rate, yearly
@@ -265,25 +278,125 @@ https://www.multpl.com/inflation/table/by-month
 ```{r}
 inflation_monthy <- read_xlsx('../DataSet/commodity prices/4-monthly-inflation.xlsx', sheet = 'Sheet1') %>%
   as_tibble() %>%
-  mutate(Date = as.Date(Date),
-         Year = year(Date),
-         Month = month(Date),
-         Rate = as.double(Value)*100) %>%
-  select(Date, Month, Year, Rate) %>%
+  mutate(Date_form = as.Date(Date),
+         Year = year(Date_form),
+         Month = month(Date_form),
+         InfRate = as.double(Value)*100) %>%
+  select(Date_form, Month, Year, InfRate) %>%
   drop_na()
 inflation_monthy
 
-plot(inflation_monthy$Rate)
+plot(inflation_monthy$InfRate)
 ```
 
-## 
+## Industrial Production
 
+```{r}
+indpro_monthy <- read_csv('../DataSet/commodity prices/5-INDPRO.csv') %>%
+  as_tibble() %>%
+  mutate(Date_form = as.Date(DATE, format = '%Y-%m-%d'),
+         Year = year(Date_form),
+         Month = month(Date_form),
+         IndPro = INDPRO) %>%
+  select(Date_form, Month, Year, IndPro) %>%
+  drop_na()
+indpro_monthy
 
+plot(indpro_monthy$IndPro)
+```
 
+```{r}
+moneysupply <- read_csv('../DataSet/commodity prices/6-money-supply.csv') %>%
+  as_tibble() %>%
+  mutate(Date_form = as.Date(paste(`Time Period`,"-01", sep =""), format = '%Y-%m-%d'),
+         Year = year(Date_form),
+         Month = month(Date_form),
+         M2 = M2_N.M) %>%
+  select(Date_form, Month, Year, M2) %>%
+  drop_na()
+moneysupply
 
+plot(moneysupply$M2)
+```
 
+```{r}
+unemployment <- read_csv('../DataSet/commodity prices/7-unemployment.csv') %>%
+  as_tibble() %>%
+  mutate(Date_form = as.Date(Date, format = '%d-%B-%y'),
+         Year = year(Date_form),
+         Month = month(Date_form),
+         UnempRate = Rate*100) %>%
+  select(Date_form, Month, Year, UnempRate) %>%
+  drop_na()
+unemployment
 
+plot(unemployment$UnempRate)
+```
 
+```{r}
+recesssion <- read_csv('../DataSet/commodity prices/8-USREC.csv') %>%
+  as_tibble() %>%
+  mutate(Date_form = as.Date(DATE),
+         Year = year(Date_form),
+         Month = month(Date_form),
+         Recesssion = USREC) %>%
+  select(Date_form, Month, Year, Recesssion) %>%
+  drop_na()
+recesssion
+
+plot(recesssion$Recesssion)
+```
+
+Combine all the proposed predictor datasets.
+
+```{r}
+df <- left_join(df, tbill, by = c('Date_form','Year','Month'))
+df <- left_join(df, gdp, by = c('Date_form','Year','Month'))
+df <- left_join(df, inflation_monthy, by = c('Date_form','Year','Month'))
+df <- left_join(df, indpro_monthy, by = c('Date_form','Year','Month'))
+df <- left_join(df, moneysupply, by = c('Date_form','Year','Month'))
+df <- left_join(df, unemployment, by = c('Date_form','Year','Month'))
+df <- left_join(df, recesssion, by = c('Date_form','Year','Month'))
+
+df.ts.modelset <- df %>% select(-c(Year,Month,IIPI_dif)) %>% drop_na()
+df.ts.modelset
+```
+
+```{r}
+mlm.ts <- lm(IIPI~., data = df.ts.modelset %>% select(-Date_form))
+summary(mlm.ts)
+
+round(mlm.ts$coefficients,3)
+
+names(mlm.ts$coefficients)[2:length(names(mlm.ts$coefficients))] %>% paste(sep = " ")
+```
+
+```{r}
+shapiro.test(rstandard(mlm.ts))
+hist(rstandard(mlm.ts),breaks=20, col="steelblue")
+```
+
+```{r}
+vif(mlm.ts)
+```
+
+```{r}
+mlm.ts1 <- lm(IIPI~., data = df.ts.modelset %>% select(-c(Date_form,GDP)))
+summary(mlm.ts1)
+```
+
+```{r}
+shapiro.test(rstandard(mlm.ts1))
+hist(rstandard(mlm.ts1),breaks=20, col="steelblue")
+```
+
+```{r}
+vif(mlm.ts1)
+```
+
+```{r}
+save.image()
+```
 
 
 

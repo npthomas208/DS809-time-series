@@ -1,0 +1,135 @@
+---
+title: "DS809 - Industrial Inputs Price Index"
+author: "Nate Thomas"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r echo = FALSE, message=FALSE, results='hide'}
+load('.RData')
+invisible(library(dplyr))
+```
+
+# Introduction and Overview
+
+This project endeavors to provide example implementation of the various methods outlined in DS809 Time Series to model the commodity Industrial Inputs Price Index from 1980 through 2016. The Industrial Input Price Index, hereafter IIPI, is provided by the IMF in the IMF Primary Commodity Prices Report (*IMF Primary Commodity Prices*, 2021). As a break-out index it does not include energy commodities (Coal, Natural Gas, Spot Crude, Propane) but does include Agricultural raw materials (Cotton, Hides, Rubber, Timber, Wool), metals (Aluminum, Cobalt, Copper, Iron Ore, Lead, Molybdenum, Nickel, Tin, Uranium, and Zinc), and precious metals (Gold, Palladium, Platinum, Silver). The commodity prices used are weighted averages representative of the global market, corrected for volume, as determined by the largest import markets for the commodity constituents. The purpose of the index is to provide a relative indicator (here indexed to 2005 = 100) for assessment of the commodities in question.
+
+The first task performed for this project was to create the time series dataset using *Predictive Dynamics in Commodity Prices* (Gargano & Timmerman, 2012) as a loose framework with select variables therein. The following data were collected and organized for subsequent analysis.
+
+A. IIPI (Aliyev, 2020), Dependent Variable and Date index. tags: **IIPI, Date_form**. This dataset defined the time frame of interest (1980-02-01 to 2016-02-01). All other datasets were selected contingent upon their inclusion of this timeframe.
+
+```{r echo = FALSE}
+p1
+```
+
+B. 13 Week Treasury Bill (*US Trade - Statistics & Facts*, 2021), Independent Variable. tag: **TBillClose**.
+
+C. US Real GDP (*Real Gross Domestic Product (GDPC1)* \| *FRED* \| *St. Louis Fed*, n.d.). tag: **GDP**
+
+D. US Inflation (*US Inflation Rate by Month*, n.d.). tag: **InfRate**
+
+E. Industrial Production ((*Industrial Production: Total Index (INDPRO)*\| *FRED* \| *St. Louis Fed*, n.d.). tag: **IndPro**
+
+F. Money Supply M2, (*BOARD OF GOVERNORS of the FEDERAL RESERVE SYSTEM*, 2021). tag: **M2**
+
+G. US Unemployment, (*Employment and Unemployment*). tag: **UnempRate**
+
+The index is indicative of global market but this project uses United States specific independent variable values as analog facsimiles for global variables when necessary. This is a recognized short-hand performed here to allow for timely and comprehensive analysis, in the absence of the global datasets for use. The United States' trade accounts for the largest percentage (13.5%) of total import trade worldwide (*US Trade - Statistics & Facts*, 2021), and therefore while this is not perfect they is used for the purposes defined here.
+
+The first rows of the dataset are displayed after collection, cleaning, being joined according to date:
+
+```{r echo = FALSE}
+head(df.ts.modelset)
+```
+
+## Excluding White Noise Criteria
+
+The first task when considering a dataset for time series analysis is to confirm that the variable of interest and its first difference are not "white noise processes" (WNP).  A WNP is defined by three (3) criteria, all of which must be met to conclude the data is WNP.
+
+1) Constant Mean: $E(IIPI_t) = \mu$ for all $t$
+
+2) Constant Variance: $Var(Y_t) = \sigma^2$ for all $t$
+
+3) Autocorrelation is not found at all lags: $\rho_k = 0$ for all $k\geq1$
+
+To show then that a series is not a WNP one must simply prove at least one of these constraints to be false.  
+
+### IIPI White Noise Rejection
+
+The Ljung-Box Q-statistic Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months):
+
+Hypothesis: 
+
+H0: All autocorrelctions are zero (0) 
+
+Ha: At least one (1) autocorrelation is not zero (0) 
+
+```{r}
+Box.test(df$IIPI,lag=36)
+```
+
+The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero.
+
+This is also seen through visual inspection of the ACF chart:
+
+```{r}
+acf(df$IIPI, lag.max=36)
+```
+
+Based on the autocorrelation chart displayed one can be confident that there exists autocorrelation to a great degree, across the three years of lag values shown.
+
+### IIPI First Difference White Noise Process Rejection
+
+Again, the Ljung-Box Q-statistic Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months):
+
+Hypothesis: 
+
+H0: All autocorrelctions are zero (0) 
+
+Ha: At least one (1) autocorrelation is not zero (0) 
+
+```{r}
+Box.test(df$IIPI_dif,lag=36)
+```
+
+The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero in the first difference series.
+
+This is also seen through visual inspection of the ACF chart:
+
+```{r}
+acf(df$IIPI_dif, lag.max=36)
+```
+
+## Visual Inspection of the Data
+
+The data was decomposed using native R *stats* package and to visually assess the potential time series affects of IIPI.
+
+```{r}
+plot(decompose(df.ts))
+```
+
+# Regression Model
+
+A multiple linear regression is estimated:
+
+$$IIPI(`r names(mlm.ts$coefficients)[2:length(names(mlm.ts$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_2 GDP  + \beta_3 InfRate + \beta_4 IndPro + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+
+Which results in the following estimated $\beta$ values:
+
+```{r echo = FALSE}
+mlm.ts$coefficients
+```
+
+The summary output results from the estimated model.
+
+```{r}
+summary(mlm.ts)
+```
+
+...
+
+Estimate a multiple linear regression model and discuss the significance of the coefficients. 
+Check multi-collinearity and check if the residual assumptions (normality, non-constant variance,
+and autocorrelation) are violated. 
+
+
