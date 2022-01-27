@@ -323,11 +323,42 @@ The removal of GDP and IndPro in the regression model has resolved the multicoll
 
 ### Regression without GDP and IndPro, Model Summary
 
-Despite the failure of the residual assumptions a breif summary is provided of the coefficient interpretations, as if the assumptions had be met for completeness.
+Despite the failure of the residual assumptions a brief summary is provided of the coefficient interpretations, as if the assumptions had be met for completenes.
+
+```{r}
+summary(mlm.ts2)
+```
+
+All following statements should be seen within the context of "if the residual assumptions were met, then..."
+
+- The expected value of IIPI if all independent variables are zero is `r mlm.ts2$coefficients[1]`.  This is not a 
+
+- The expected change in the value of IIPI, ceteris paribus, for each unit change in inflation is `r mlm.ts2$coefficients[2]`
+
+- The expected change in the value of IIPI, ceteris paribus, for each unit change in money supply is `r mlm.ts2$coefficients[3]`
+
+- The expected change in the value of IIPI, ceteris paribus, for each unit change in unemployment is `r mlm.ts2$coefficients[4]`
+
+- The expected change in the value of IIPI, ceteris paribus, if the market cycle is indicated as being in recession is `r mlm.ts2$coefficients[4]`
 
 ### Regression without GDP and IndPro, Model Fit Summary
 
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  predict(mlm.ts2,interval="prediction")
+confint =  predict(mlm.ts2,interval="confidence")
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
 
+plot(df.ts.modelset.train$IIPI, col="lightgray")
+lines(predint[,1],col="red")
+lines(1:423,predlower,col="orange")
+lines(1:423,predupper,col="orange")
+lines(1:423,conflower,col="blue")
+lines(1:423,confupper,col="blue")
+```
 
 
 
