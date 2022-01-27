@@ -116,7 +116,7 @@ The autocorrolation function chart shown above indicates that the residuals of t
 Finally, White's Test for heteroscedasticity is performed on the model residuals to test for constant variance:
 
 ```{r}
-white_lm(slm)
+white_lm(slm, interactions = TRUE)
 ```
 
 H0: There is no heteroscedasticity.
@@ -199,7 +199,7 @@ The autocorrolation function chart shown above indicates that the residuals of t
 Finally, White's Test for heteroscedasticity is performed on the model residuals to test for constant variance:
 
 ```{r}
-white_lm(slm_dif)
+white_lm(slm_dif, interactions = TRUE)
 ```
 
 H0: There is no heteroscedasticity.

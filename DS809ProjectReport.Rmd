@@ -9,6 +9,7 @@ output: word_document
 load('.RData')
 library(dplyr)
 library(car)
+library(skedastic)
 ```
 
 # Introduction and Overview
@@ -111,23 +112,73 @@ plot(decompose(df.ts))
 
 # Regression Model
 
+## Initial Regression, with all variables
+
 A multiple linear regression is estimated:
 
 $$IIPI(`r names(mlm.ts$coefficients)[2:length(names(mlm.ts$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_2 GDP  + \beta_3 InfRate + \beta_4 IndPro + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
 
-Which results in the following estimated $\beta$ values:
+, which results in the following estimated $\beta$ values:
 
 ```{r echo = FALSE}
 mlm.ts$coefficients
 ```
 
-The summary output results from the estimated model.
+The summary and analysis of these coefficients is not performed here, due to failure of all residual assumptions, as follows.
 
-```{r echo = FALSE}
-summary(mlm.ts)
+### Residual Assumptions
+
+Before proceeding with model interpretation the regression residual assumptions must be verified:
+
+1. $E(\epsilon_t|X_{1t},...,X_{kt}) = 0$ (zero mean assumption)
+
+2. $Var(\epsilon_t|X_{1t},...,X_{kt}) = Var(\epsilon_t) = \sigma^2$ for all $t$ (constant variance assumption)
+
+3. $(\epsilon_t|X_{1t},...,X_{kt}) ~N(0,\sigma^2)$ for all $t$ (normality assumption)
+
+4. $Cov((\epsilon_t,\epsilon_h|X_{1t},...,X_{kt}) = 0$ for $t \neq h$ (error terms are not autocorrelated along the time dimension)
+
+#### Residual Normality
+
+The Shapiro-Wilk Test is performed to verify residual normality:
+
+```{r}
+shapiro.test(rstandard(mlm.ts))
 ```
 
-First, before assessing the validity of the residual assumtions variance inflation factors are computed to identify any multi-collinearities.
+$H_0$: Series are normally distributed. vs. $H_a$: Series are not normally distributed
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that the series are not normally distributed.
+
+#### Residual Autocorrelation
+
+The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
+
+```{r}
+Box.test(rstandard(mlm.ts), lag=36)
+```
+
+$H_0$: $\rho_1=\rho_2=\rho_k=0$ (all autocorrelations are zero). vs. $H_a$: at least one $\rho_k \neq 0$ (at least one autocorrealtion is not zero)
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that at least one lag value returns a statistically significant autocorrelation.
+
+#### Constant Variance
+
+White's test for Heteroscedasticity is performed to confirm constant variance:
+
+```{r}
+white_lm(mlm.ts, interactions = TRUE)
+```
+
+$H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is Heteroscedasticity (no constant variance)
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series.
+
+### Initial Regression, ResidualSummary
+
+All the residual assumptions failed for this initial regression.  Therefore, assessment of the coefficients is not performed here.  Subsequent methods and analysis is required to remediate the complexities presented by this dataset.
+
+In conjunction with resolving the residual assumptions, the variance inflation factors are computed to identify any multi-collinearities.  
 
 ```{r echo = FALSE}
 vif(mlm.ts)
@@ -135,22 +186,159 @@ vif(mlm.ts)
 
 Ten (10) is the typically accepted subjective value at which a variance inflation factor is considered high.  GDP, IndPro and M2 all exceed this limit.
 
-A new linear model is therefore estimated without GDP:
+A new linear model is therefore estimated without GDP, which has the highest VIF.
 
-```{r echo =FALSE}
-summary(mlm.ts1)
+## Regression without GDP
+
+The following multiple linear regression model is estimated:
+
+$$IIPI(`r names(mlm.ts1$coefficients)[2:length(names(mlm.ts1$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_4 IndPro + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+
+, which results in the following estimated $\beta$ values:
+
+```{r echo = FALSE}
+mlm.ts1$coefficients
 ```
 
-Multi-collinearity is assessed for the updated model, with the resutling variance inflation factors:
+Again, summary and analysis of these coefficients is not performed here due to failure of all residual assumptions, as follows.
+
+#### Residual Normality
+
+The Shapiro-Wilk Test is performed to verify residual normality:
+
+```{r}
+shapiro.test(rstandard(mlm.ts1))
+```
+
+$H_0$: Series are normally distributed. vs. $H_a$: Series are not normally distributed
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that the series are not normally distributed.
+
+#### Residual Autocorrelation
+
+The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
+
+```{r}
+Box.test(rstandard(mlm.ts1), lag=36)
+```
+
+$H_0$: $\rho_1=\rho_2=\rho_k=0$ (all autocorrelations are zero). vs. $H_a$: at least one $\rho_k \neq 0$ (at least one autocorrealtion is not zero)
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that at least one lag value returns a statistically significant autocorrelation.
+
+#### Constant Variance
+
+White's test for Heteroscedasticity is performed to confirm constant variance:
+
+```{r}
+white_lm(mlm.ts1, interactions = TRUE)
+```
+
+$H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is Heteroscedasticity (no constant variance)
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series.
+
+### Regression without GDP, Residual Summary
+
+All the residual assumptions failed for this regression excluding GDP.  Therefore, assessment of the coefficients is not performed here.  Subsequent methods and analysis is required to remediate the complexities presented by this dataset.
+
+In conjunction with resolving the residual assumptions, the variance inflation factors are computed to identify any multi-collinearities.  
 
 ```{r echo = FALSE}
 vif(mlm.ts1)
 ```
 
-```{r}
+Ten (10) is the typically accepted subjective value at which a variance inflation factor is considered high.  IndPro exceeds this limit.
 
+A new linear model is therefore estimated without GDP and IndPro.
+
+
+## Regression without GDP and IndPro
+
+The following multiple linear regression model is estimated:
+
+$$IIPI(`r names(mlm.ts1$coefficients)[2:length(names(mlm.ts1$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+
+, which results in the following estimated $\beta$ values:
+
+```{r echo = FALSE}
+mlm.ts2$coefficients
 ```
 
+#### Residual Normality
+
+The Shapiro-Wilk Test is performed to verify residual normality:
+
+```{r}
+shapiro.test(rstandard(mlm.ts2))
+```
+
+$H_0$: Series are normally distributed. vs. $H_a$: Series are not normally distributed
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that the series are not normally distributed.
+
+#### Residual Autocorrelation
+
+The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
+
+```{r}
+Box.test(rstandard(mlm.ts2), lag=36)
+```
+
+$H_0$: $\rho_1=\rho_2=\rho_k=0$ (all autocorrelations are zero). vs. $H_a$: at least one $\rho_k \neq 0$ (at least one autocorrealtion is not zero)
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that at least one lag value returns a statistically significant autocorrelation.
+
+The following is the autcorrelation function (ACF) chart:
+
+```{r}
+acf(rstandard(mlm.ts2))
+```
+
+This slow decay and magnitude of the autocorrelations indicate this is a non-stationary process.
+
+#### Constant Variance
+
+White's test for Heteroscedasticity is performed to confirm constant variance:
+
+```{r}
+white_lm(mlm.ts2, interactions = TRUE)
+```
+
+$H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is Heteroscedasticity (no constant variance)
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series.
+
+### Regression without GDP and IndPro, Residual Summary
+
+All the residual assumptions failed for the regression excluding GDP and IndPro.  Subsequent methods and analysis is required to remediate the complexities presented by this dataset.
+
+In conjunction with resolving the residual assumptions, the variance inflation factors are computed to identify any multi-collinearities.  
+
+```{r echo = FALSE}
+vif(mlm.ts2)
+```
+
+The removal of GDP and IndPro in the regression model has resolved the multicollinearity issues, as can be seen by the fact that all VIF values are much less than ten (10). 
+
+### Regression without GDP and IndPro, Model Summary
+
+Despite the failure of the residual assumptions a breif summary is provided of the coefficient interpretations, as if the assumptions had be met for completeness.
+
+### Regression without GDP and IndPro, Model Fit Summary
+
+
+
+
+
+
+
+
+
+
+Show that the AdjR2 are not usefull becasue the regression assumptions are not met.
+
+Check if one can use a stabilizing function log(IIPI) or sqr(IIPI)
 
 Estimate a multiple linear regression model and discuss the significance of the coefficients. 
 Check multi-collinearity and check if the residual assumptions (normality, non-constant variance,
@@ -158,7 +346,6 @@ and autocorrelation) are violated.
 
 Intercept is the expected value of IIPI when all independent variables are zero (0)...
 Coefficients, given ceteris paribus, are the expected increase / decrease of IIPI 
-
 
 Plot data vs. model fit... example slide 44...
 
