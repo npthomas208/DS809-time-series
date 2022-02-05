@@ -10,13 +10,14 @@ load('.RData')
 library(dplyr)
 library(car)
 library(skedastic)
+library(kableExtra)
 ```
 
 # Introduction and Overview
 
-This project endeavors to provide example implementation of the various methods outlined in DS809 Time Series to model the commodity Industrial Inputs Price Index from 1980 through 2016. The Industrial Input Price Index, hereafter IIPI, is provided by the IMF in the IMF Primary Commodity Prices Report (*IMF Primary Commodity Prices*, 2021). As a break-out index it does not include energy commodities (Coal, Natural Gas, Spot Crude, Propane) but does include Agricultural raw materials (Cotton, Hides, Rubber, Timber, Wool), metals (Aluminum, Cobalt, Copper, Iron Ore, Lead, Molybdenum, Nickel, Tin, Uranium, and Zinc), and precious metals (Gold, Palladium, Platinum, Silver). The commodity prices used are weighted averages representative of the global market, corrected for volume, as determined by the largest import markets for the commodity constituents. The purpose of the index is to provide a relative indicator (here indexed to 2005 = 100) for assessment of the commodities in question.
+This project endeavors to provide example implementation of the various methods outlined in DS809 Time Series to model the commodity Industrial Inputs Price Index from 1980 through 2016. The Industrial Input Price Index, hereafter IIPI, is provided by the IMF in the IMF Primary Commodity Prices Report (*IMF Primary Commodity Prices*, 2021). As a break-out index it does not include energy commodities (Coal, Natural Gas, Spot Crude, Propane) but does include Agricultural raw materials (Cotton, Hides, Rubber, Timber, Wool), metals (Aluminum, Cobalt, Copper, Iron Ore, Lead, Molybdenum, Nickel, Tin, Uranium, and Zinc), and precious metals (Gold, Palladium, Platinum, Silver). The commodity prices used are weighted averages representative of the global market, corrected for volume, as determined by the largest import markets for the commodity constituents. The purpose of the index is to provide a relative value indicator (here indexed to 2005 = 100) for assessment of the commodities in question.
 
-The first task performed for this project was to create the time series dataset using *Predictive Dynamics in Commodity Prices* (Gargano & Timmerman, 2012) as a loose framework with select variables therein. The following data were collected and organized for subsequent analysis.
+The first task performed for this project was to create the time series dataset using *Predictive Dynamics in Commodity Prices* (Gargano & Timmerman, 2012) as a loose framework with select variables therein. These  were collected and organized for subsequent analysis.
 
 A. IIPI (Aliyev, 2020), Dependent Variable and Date index. tags: **IIPI, Date_form**. This dataset defined the time frame of interest (1980-02-01 to 2016-02-01). All other datasets were selected contingent upon their inclusion of this timeframe.
 
@@ -36,7 +37,9 @@ F. Money Supply M2, (*BOARD OF GOVERNORS of the FEDERAL RESERVE SYSTEM*, 2021). 
 
 G. US Unemployment, (*Employment and Unemployment*). tag: **UnempRate**
 
-The index is indicative of global market but this project uses United States specific independent variable values as analog facsimiles for global variables when necessary. This is a recognized short-hand performed here to allow for timely and comprehensive analysis, in the absence of the global datasets for use. The United States' trade accounts for the largest percentage (13.5%) of total import trade worldwide (*US Trade - Statistics & Facts*, 2021), and therefore while this is not perfect they is used for the purposes defined here.
+H. Recession, (*Dates of U.S. Recessions as Inferred by GDP-based Recession Indicator*). tag : **Recession**
+
+The index is indicative of global market but this project uses United States specific independent variable values as analog facsimiles for global variables when necessary. This is a recognized short-hand performed here to allow for timely and comprehensive analysis, in the absence of the global datasets for use. United States' trade accounts for the largest percentage (13.5%) of total import trade worldwide (*US Trade - Statistics & Facts*, 2021), and therefore while this is not perfect it is used for the purposes defined here.
 
 The first rows of the dataset are displayed after collection, cleaning, being joined according to date:
 
@@ -60,17 +63,13 @@ To show then that a series is not a WNP one must simply prove at least one of th
 
 The Box-Pierce Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months):
 
-Hypothesis: 
-
-H0: All autocorrelctions are zero (0) 
-
-Ha: At least one (1) autocorrelation is not zero (0) 
+Hypothesis: $H_0$: All autocorrelctions are zero (0), $H_a$: At least one (1) autocorrelation is not zero (0) 
 
 ```{r echo = FALSE}
 Box.test(df$IIPI,lag=36)
 ```
 
-The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero.
+The test indicates one can safely reject the null hypothesis ($H_0$) - such that at least one (1) autocorrleation is not zero.
 
 This is also seen through visual inspection of the ACF chart:
 
@@ -78,17 +77,13 @@ This is also seen through visual inspection of the ACF chart:
 acf(df$IIPI, lag.max=36)
 ```
 
-Based on the autocorrelation chart displayed one can be confident that there exists autocorrelation to a great degree, across the three years of lag values shown.
+Based on the autocorrelation chart displayed one can be confident that there exists autocorrelation to a great degree, across the three years of lag values shown.  The series is non-stationary as seen be by the slow decay in autocorrelation as lag values increase.
 
 ### IIPI First Difference White Noise Process Rejection
 
-Again, the Box-Pierce Q-statistic Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months):
+Again, the Box-Pierce Q-statistic Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months) for also the first difference:
 
-Hypothesis: 
-
-H0: All autocorrelctions are zero (0) 
-
-Ha: At least one (1) autocorrelation is not zero (0) 
+Hypothesis: $H_0$: All autocorrelctions are zero (0), $H_a$: At least one (1) autocorrelation is not zero (0) 
 
 ```{r echo = FALSE}
 Box.test(df$IIPI_dif,lag=36)
@@ -102,6 +97,8 @@ This is also seen through visual inspection of the ACF chart:
 acf(df$IIPI_dif, lag.max=36)
 ```
 
+The first difference of the data is stationary as can be seen in the fast decay in autocorrelation.  It is not white noise due to the autocorrelations mostly at lags 1 and 2.
+
 ## Visual Inspection of the Data
 
 The data was decomposed using native R *stats* package and to visually assess the potential time series affects of IIPI.
@@ -110,19 +107,13 @@ The data was decomposed using native R *stats* package and to visually assess th
 plot(decompose(df.ts))
 ```
 
-# Regression Model
+# Regression Models
 
 ## Initial Regression, with all variables
 
 A multiple linear regression is estimated:
 
 $$IIPI(`r names(mlm.ts$coefficients)[2:length(names(mlm.ts$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_2 GDP  + \beta_3 InfRate + \beta_4 IndPro + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
-
-, which results in the following estimated $\beta$ values:
-
-```{r echo = FALSE}
-mlm.ts$coefficients
-```
 
 The summary and analysis of these coefficients is not performed here, due to failure of all residual assumptions, as follows.
 
@@ -156,9 +147,12 @@ The Box-Pierce test is performed to identify if the residuals are autocorrelated
 
 ```{r}
 Box.test(rstandard(mlm.ts), lag=36)
+acf(rstandard(mlm.ts))
 ```
 
 $H_0$: $\rho_1=\rho_2=\rho_k=0$ (all autocorrelations are zero). vs. $H_a$: at least one $\rho_k \neq 0$ (at least one autocorrealtion is not zero)
+
+The residuals are highly autocorrelated and non-stationary.  This model can be improved greatly, as there still appears to be time series information not captured in this model.
 
 The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that at least one lag value returns a statistically significant autocorrelation.
 
@@ -176,7 +170,7 @@ The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one mu
 
 ### Initial Regression, ResidualSummary
 
-All the residual assumptions failed for this initial regression.  Therefore, assessment of the coefficients is not performed here.  Subsequent methods and analysis is required to remediate the complexities presented by this dataset.
+All the residual assumptions failed for this initial regression.  Subsequent methods and analysis is required to remediate the complexities presented by this dataset.
 
 In conjunction with resolving the residual assumptions, the variance inflation factors are computed to identify any multi-collinearities.  
 
@@ -202,68 +196,59 @@ mlm.ts1$coefficients
 
 Again, summary and analysis of these coefficients is not performed here due to failure of all residual assumptions, as follows.
 
-#### Residual Normality
-
-The Shapiro-Wilk Test is performed to verify residual normality:
-
-```{r}
-shapiro.test(rstandard(mlm.ts1))
-```
-
-$H_0$: Series are normally distributed. vs. $H_a$: Series are not normally distributed
-
-The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that the series are not normally distributed.
-
-#### Residual Autocorrelation
-
-The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
-
-```{r}
-Box.test(rstandard(mlm.ts1), lag=36)
-```
-
-$H_0$: $\rho_1=\rho_2=\rho_k=0$ (all autocorrelations are zero). vs. $H_a$: at least one $\rho_k \neq 0$ (at least one autocorrealtion is not zero)
-
-The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that at least one lag value returns a statistically significant autocorrelation.
-
-#### Constant Variance
-
-White's test for Heteroscedasticity is performed to confirm constant variance:
-
-```{r}
-white_lm(mlm.ts1, interactions = TRUE)
-```
-
-$H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is Heteroscedasticity (no constant variance)
-
-The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series.
-
-### Regression without GDP, Residual Summary
-
-All the residual assumptions failed for this regression excluding GDP.  Therefore, assessment of the coefficients is not performed here.  Subsequent methods and analysis is required to remediate the complexities presented by this dataset.
-
-In conjunction with resolving the residual assumptions, the variance inflation factors are computed to identify any multi-collinearities.  
+Now, to continue improving the model by reducing inter independent variable multicollinarity, the variance inflation factors are computed.
 
 ```{r echo = FALSE}
 vif(mlm.ts1)
 ```
 
-Ten (10) is the typically accepted subjective value at which a variance inflation factor is considered high.  IndPro exceeds this limit.
+IndPro exceeds the limit and is removed.
 
 A new linear model is therefore estimated without GDP and IndPro.
-
 
 ## Regression without GDP and IndPro
 
 The following multiple linear regression model is estimated:
 
-$$IIPI(`r names(mlm.ts1$coefficients)[2:length(names(mlm.ts1$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+$$IIPI(`r names(mlm.ts2$coefficients)[2:length(names(mlm.ts2$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
 
 , which results in the following estimated $\beta$ values:
 
 ```{r echo = FALSE}
 mlm.ts2$coefficients
 ```
+
+### Model Fit Plot
+
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  predict(mlm.ts2,df.ts.modelset,interval="prediction")
+confint =  predict(mlm.ts2,df.ts.modelset,interval="confidence")
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
+
+plot(df.ts.modelset$IIPI, col="lightgray")
+lines(predint[,1],col="red")
+abline(v=424,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
+Variance inflation factors are computed again to identify multi-collinearities.  
+
+```{r echo = FALSE}
+vif(mlm.ts2)
+```
+
+The removal of GDP and IndPro in the regression model has resolved the multicollinearity issues, as can be seen by the fact that all VIF values now less than ten (10). 
+
+Therefore the residual assumptions are tested, as follows.
+
+### Residual Assumptions
 
 #### Residual Normality
 
@@ -295,7 +280,7 @@ The following is the autcorrelation function (ACF) chart:
 acf(rstandard(mlm.ts2))
 ```
 
-This slow decay and magnitude of the autocorrelations indicate this is a non-stationary process.
+This slow decay and magnitude of the autocorrelations indicate this is a non-stationary process.  This model does not capture all the time series related information. Further model improvement is necessary. 
 
 #### Constant Variance
 
@@ -309,21 +294,13 @@ $H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is He
 
 The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series.
 
-### Regression without GDP and IndPro, Residual Summary
+### Residual Summary
 
-All the residual assumptions failed for the regression excluding GDP and IndPro.  Subsequent methods and analysis is required to remediate the complexities presented by this dataset.
+All the residual assumptions failed for the regression excluding GDP and IndPro.  
 
-In conjunction with resolving the residual assumptions, the variance inflation factors are computed to identify any multi-collinearities.  
+### Model Summary
 
-```{r echo = FALSE}
-vif(mlm.ts2)
-```
-
-The removal of GDP and IndPro in the regression model has resolved the multicollinearity issues, as can be seen by the fact that all VIF values are much less than ten (10). 
-
-### Regression without GDP and IndPro, Model Summary
-
-Despite the failure of the residual assumptions a brief summary is provided of the coefficient interpretations, as if the assumptions had be met for completenes.
+Despite the failure of the residual assumptions a brief summary is provided of the coefficient interpretations, if the assumptions had be met for completeness.
 
 ```{r}
 summary(mlm.ts2)
@@ -331,33 +308,381 @@ summary(mlm.ts2)
 
 All following statements should be seen within the context of "if the residual assumptions were met, then..."
 
-- The expected value of IIPI if all independent variables are zero is `r mlm.ts2$coefficients[1]`.  This is not a 
+- The expected value of IIPI if all independent variables are zero is approximately zero (0) as the p-value for the intercept as the p-value is not significant.   
 
-- The expected change in the value of IIPI, ceteris paribus, for each unit change in inflation is `r mlm.ts2$coefficients[2]`
+- The expected change in the value of IIPI, ceteris paribus, for each unit change in treasury bill close is approximately zero (0) as the p-value for this coefficient is not significant.
 
-- The expected change in the value of IIPI, ceteris paribus, for each unit change in money supply is `r mlm.ts2$coefficients[3]`
+- The expected change in the value of IIPI, ceteris paribus, for each unit change in inflation is `r mlm.ts2$coefficients[3]`
 
-- The expected change in the value of IIPI, ceteris paribus, for each unit change in unemployment is `r mlm.ts2$coefficients[4]`
+- The expected change in the value of IIPI, ceteris paribus, for each unit change in money supply is `r mlm.ts2$coefficients[4]`
 
-- The expected change in the value of IIPI, ceteris paribus, if the market cycle is indicated as being in recession is `r mlm.ts2$coefficients[4]`
+- The expected change in the value of IIPI, ceteris paribus, for each unit change in unemployment is `r mlm.ts2$coefficients[5]`
 
-### Regression without GDP and IndPro, Model Fit Summary
+- The expected change in the value of IIPI, ceteris paribus, if the market cycle is indicated as being in recession is `r mlm.ts2$coefficients[6]`
+
+
+## Regression without GDP and IndPro, and with variance stabilizing functions natural log.
+
+The following multiple linear regression model is estimated:
+
+$$ln(IIPI)(`r names(mlm.ts3$coefficients)[2:length(names(mlm.ts3$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+
+### Model Fit Plot
 
 ```{r echo = FALSE}
 #Plotting the confidence and prediction intervals
-predint =  predict(mlm.ts2,interval="prediction")
-confint =  predict(mlm.ts2,interval="confidence")
+predint =  exp(predict(mlm.ts3,df.ts.modelset,interval="prediction"))
+confint =  exp(predict(mlm.ts3,df.ts.modelset,interval="confidence"))
 predlower = predint[,2]
 predupper = predint[,3]
 conflower = confint[,2]
 confupper = confint[,3]
 
-plot(df.ts.modelset.train$IIPI, col="lightgray")
+plot(df.ts.modelset$IIPI, col="lightgray")
 lines(predint[,1],col="red")
-lines(1:423,predlower,col="orange")
-lines(1:423,predupper,col="orange")
-lines(1:423,conflower,col="blue")
-lines(1:423,confupper,col="blue")
+abline(v=424,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
+#### Constant Variance
+
+White's test for Heteroscedasticity is performed to confirm constant variance:
+
+```{r}
+white_lm(mlm.ts3, interactions = TRUE)
+```
+
+$H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is Heteroscedasticity (no constant variance)
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series. Applying the natural log conversion did not resolve the issue with heteroskedasticity.
+
+### Model Summary
+
+The intrepatbility of the model coefficients within the context of actual units of IIPI has been obscured by the natural log function.  Therefore, if interpretability of the model is prefered then the without any variance stabilizatoin is recommended.
+
+
+## Regression without GDP and IndPro, and with variance stabilizing function: square-root
+
+The following multiple linear regression model is estimated:
+
+$$\sqrt{IIPI}(`r names(mlm.ts4$coefficients)[2:length(names(mlm.ts4$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+
+### Model Fit Summary
+
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  (predict(mlm.ts4,df.ts.modelset,interval="prediction"))^2
+confint =  (predict(mlm.ts4,df.ts.modelset,interval="confidence"))^2
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
+
+plot(df.ts.modelset$IIPI, col="lightgray")
+lines(predint[,1],col="red")
+abline(v=424,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
+### Residual Assumptions
+
+#### Constant Variance
+
+White's test for Heteroscedasticity is performed to confirm constant variance:
+
+```{r}
+white_lm(mlm.ts4, interactions = TRUE)
+```
+
+$H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is Heteroscedasticity (no constant variance)
+
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series. Applying the square-rrot conversion did not resolve the issue with heteroskedasticity.
+
+All subsequent models exclude GDP and IndPro.
+
+# Deterministic Models
+
+## Indicator Variable Regression Model with Trend
+
+A month indicator variable linear regression is estimated, correcting for linear time trend:
+
+$$IIPI(`r names(dlm.ts1$coefficients)[2:4] %>% paste(sep = " ")`,...,`r names(dlm.ts1$coefficients)[13]`) = \beta_0 + \beta_1 t + \beta_{1+i}\sum_{i=1}^{12}Monthi +  \epsilon_t$$
+
+### Model Fit Plot
+
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  predict(dlm.ts1,df.ts.modelset.deterministic,interval="prediction")
+confint =  predict(dlm.ts1,df.ts.modelset.deterministic,interval="confidence")
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
+
+plot(df.ts.modelset.deterministic$IIPI, col="lightgray")
+lines(predint[,1],col="red")
+abline(v=424,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
+### Residual Assumptions
+
+#### Residual Autocorrelation
+
+The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
+
+```{r}
+Box.test(rstandard(dlm.ts1))
+```
+
+$H_0$ is rejected.  Autocorrelation is present in the series.
+
+```{r}
+acf(rstandard(dlm.ts1))
+```
+
+Again, this residuals are highly autoccorrelated and non-stationary. Other methods will be investigated to determine a model which results in stationary white noise residuals.
+
+#### Residual Normality
+
+The Shapiro-Wilk Test is performed to verify residual normality:
+
+```{r}
+hist(rstandard(dlm.ts1))
+shapiro.test(rstandard(dlm.ts1))
+```
+
+As can be seen, and is confirmed by the Shapiro-Wilk test, the residuals of the model are not normally distributed.
+
+#### Constant Variance
+
+White's test for Heteroscedasticity is performed to confirm constant variance:
+
+```{r}
+white_lm(dlm.ts1, interactions = TRUE)
+```
+
+$H_0$ is accepted, therefore allowing one to conclude that the residuals have constant variance.
+
+### Model Summary
+
+```{r}
+summary(dlm.ts1)
+```
+
+If the residual assumptions were confirmed then one could interpret the t-test p-values as indicating that there did not appear to be any monthly trends.
+
+###################
+
+## Polynomial Model, k=5
+
+A polynomial linear regression is estimated:
+
+$$IIPI(t) = \beta_0 + \beta_1 t + \beta_{2}t^2 + ...+ \beta_{k}t^k + \epsilon_t$$
+
+The highest order model which does not result in an increase in the adjusted R-squared.   This was found using the following funtion:
+
+```{r eval=FALSE, echo=FALSE}
+kfind <- function(d) {
+  r2adjust <- 0
+  for (k in 1:30){
+    lm_summary_temp <- lm(IIPI~poly(index,k),data = d) %>% summary()
+    print(k)
+    print(lm_summary_temp$adj.r.squared)
+    if (lm_summary_temp$adj.r.squared>r2adjust){
+      k_opt <- k
+    }
+    if(lm_summary_temp$adj.r.squared<=r2adjust){
+      break
+    }
+    r2adjust<-lm_summary_temp$adj.r.squared
+  }
+  return(k_opt)
+}
+```
+
+$$k = 5$$
+
+### Model Fit Plot
+
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  predict(dlm.ts2,df.ts.modelset.deterministic,interval="prediction")
+confint =  predict(dlm.ts2,df.ts.modelset.deterministic,interval="confidence")
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
+
+plot(df.ts.modelset.deterministic$IIPI, col="lightgray")
+lines(predint[,1],col="red")
+abline(v=424,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
+### Residual Assumptions
+
+#### Residual Autocorrelation
+
+The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
+
+```{r}
+Box.test(rstandard(dlm.ts2))
+```
+
+$H_0$ is rejected.  Autocorrelation is present in the series.
+
+```{r}
+acf(rstandard(dlm.ts2))
+```
+
+Again, the residuals are highly autoccorrelated and non-stationary.  More work is required to improve the model. There is more inherent information in the time-series component that is not captured by this model.
+
+#### Residual Normality
+
+The Shapiro-Wilk Test is performed to verify residual normality:
+
+```{r}
+hist(rstandard(dlm.ts2))
+shapiro.test(rstandard(dlm.ts2))
+```
+
+As can be seen, and is confirmed by the Shapiro-Wilk test, the residuals of the model are not normally distributed....
+
+#### Constant Variance
+
+White's test for Heteroscedasticity is performed to confirm constant variance:
+
+```{r}
+white_lm(dlm.ts2, interactions = TRUE)
+```
+
+... Residuals do not have constant variance.
+
+### Model Summary
+
+```{r}
+summary(dlm.ts2)
+```
+
+If the residual assumptions were found to be true could interpret the coefficients as follows. All p-values indicate significance .
+
+- The expected value of IIPI at time =0 are zero is `r dlm.ts2$coefficients[1]`.   
+
+- The expected change in the value of IIPI, ceteris paribus, for each unit change the time index is `r dlm.ts2$coefficients[2]`.
+
+- The expected change in the value of IIPI, ceteris paribus, for each unit change the time index squared is `r dlm.ts2$coefficients[3]`.
+
+- The expected change in the value of IIPI, ceteris paribus, for each unit change the time index cubed is `r dlm.ts2$coefficients[4]`.
+
+- The expected change in the value of IIPI, ceteris paribus, for each unit change the time index raised to the fourth power is `r dlm.ts2$coefficients[5]`.
+
+- The expected change in the value of IIPI, ceteris paribus, for each unit change the time index raised to the fifth power is `r dlm.ts2$coefficients[6]`.
+
+## Harmonic Model
+
+A de-trended harmonic model is estimated:
+
+$$IIPI(t) = \beta_0 + \beta_1 t + \sum{\alpha_isin(\frac{2\pi i}{s}t)} + \sum{\beta_icos(\frac{2\pi i}{s}t)} + \epsilon_t$$
+
+### Periodogram
+
+First IIPI is de-trended then, in order to determine the harmonics, a periodogram is reviewed:
+
+```{r echo = FALSE}
+periodogram(detrend$residuals)
+```
+
+Unfortunately, the periodogram has such high density at lower harmonics, for the purposes of this project the 30 are first taken.  The model will be reduced iteratively based on partial F-tests.
+
+
+
+### Model Fit Plot
+
+### Residual Assumptions
+
+#### Residual Autocorrelation
+
+#### Residual Normality
+
+#### Constant Variance
+
+### Model Summary
+
+
+# XXXXXX Model [SECTION]
+
+## ... Model
+
+### Model Fit Plot
+
+### Residual Assumptions
+
+#### Residual Autocorrelation
+
+#### Residual Normality
+
+#### Constant Variance
+
+### Model Summary
+
+
+
+
+
+# Model Comparisions
+
+### In-sample Comparisons
+
+```{r echo=FALSE, warings=FALSE}
+r2adjtbl <- tibble(
+  Model = c(
+    'Linear Model, variable reduced',
+    'Deterministic Model, Monthly Indicator with Trend',
+    'Deterministic Model, Polynomial k=5'), 
+  `Adjusted R-squared` = c(summary(mlm.ts2)$adj.r.squared,
+                           summary(dlm.ts1)$adj.r.squared,
+                           summary(dlm.ts2)$adj.r.squared)
+)
+r2adjtbl
+```
+
+### MAPE Prediction Comparison
+
+```{r echo=FALSE, warings=FALSE}
+mape <- function(d,p){
+  mean(abs(d-p)/d)
+}
+
+mapetbl <- tibble(
+  Model = c(
+    'Linear Model, variable reduced',
+    'Deterministic Model, Monthly Indicator with Trend',
+    'Deterministic Model, Polynomial k=5'), 
+  MAPE = c(
+    mape(d = df.ts.modelset.test$IIPI, 
+         p= predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)), interval="prediction")),
+    mape(d = df.ts.modelset.deterministic.test$IIPI, 
+         p= predict(dlm.ts1, df.ts.modelset.deterministic.test, interval="prediction")),
+    mape(d = df.ts.modelset.deterministic.test$IIPI, 
+         p= predict(dlm.ts2, df.ts.modelset.deterministic.test, interval="prediction"))
+    )
+  )
+
+mapetbl %>% kable()
+
 ```
 
 
@@ -367,16 +692,24 @@ lines(1:423,confupper,col="blue")
 
 
 
-Show that the AdjR2 are not usefull becasue the regression assumptions are not met.
 
-Check if one can use a stabilizing function log(IIPI) or sqr(IIPI)
 
-Estimate a multiple linear regression model and discuss the significance of the coefficients. 
-Check multi-collinearity and check if the residual assumptions (normality, non-constant variance,
-and autocorrelation) are violated. 
 
-Intercept is the expected value of IIPI when all independent variables are zero (0)...
-Coefficients, given ceteris paribus, are the expected increase / decrease of IIPI 
 
-Plot data vs. model fit... example slide 44...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

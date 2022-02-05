@@ -16,6 +16,7 @@ library(readxl)
 library(moments)
 library(car)
 library(ggplot2)
+library(TSA)
 ```
 
 # Initalialization 
@@ -334,17 +335,17 @@ plot(unemployment$UnempRate)
 ```
 
 ```{r}
-recesssion <- read_csv('../DataSet/commodity prices/8-USREC.csv') %>%
+recession <- read_csv('../DataSet/commodity prices/8-USREC.csv') %>%
   as_tibble() %>%
   mutate(Date_form = as.Date(DATE),
          Year = year(Date_form),
          Month = month(Date_form),
-         Recesssion = USREC) %>%
-  select(Date_form, Month, Year, Recesssion) %>%
+         Recession = USREC) %>%
+  select(Date_form, Month, Year, Recession) %>%
   drop_na()
-recesssion
+recession
 
-plot(recesssion$Recesssion)
+plot(recession$Recession)
 ```
 
 Combine all the proposed predictor datasets.
@@ -356,7 +357,7 @@ df <- left_join(df, inflation_monthy, by = c('Date_form','Year','Month'))
 df <- left_join(df, indpro_monthy, by = c('Date_form','Year','Month'))
 df <- left_join(df, moneysupply, by = c('Date_form','Year','Month'))
 df <- left_join(df, unemployment, by = c('Date_form','Year','Month'))
-df <- left_join(df, recesssion, by = c('Date_form','Year','Month'))
+df <- left_join(df, recession, by = c('Date_form','Year','Month'))
 
 df.ts.modelset <- df %>% select(-c(Year,Month,IIPI_dif)) %>% drop_na()
 df.ts.modelset
@@ -398,7 +399,7 @@ vif(mlm.ts1)
 ```
 
 ```{r}
-mlm.ts2 <- lm(IIPI~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro,TBillClose)))
+mlm.ts2 <- lm(IIPI~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro)))
 summary(mlm.ts2)
 ```
 
@@ -411,10 +412,146 @@ hist(rstandard(mlm.ts2),breaks=20, col="steelblue")
 vif(mlm.ts2)
 ```
 ```{r}
-predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro,TBillClose)), interval="prediction")
+predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)), interval="prediction")
 ```
 ```{r}
-df.ts.modelset.test$IIPI
+mlm.ts3 <- lm(log(IIPI)~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro,TBillClose)))
+```
+
+```{r}
+shapiro.test(rstandard(mlm.ts3))
+hist(rstandard(mlm.ts3),breaks=20, col="steelblue")
+```
+
+```{r}
+vif(mlm.ts3)
+```
+
+```{r}
+predict(mlm.ts3, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro,TBillClose)), interval="prediction")
+```
+
+```{r}
+white_lm(mlm.ts3)
+```
+
+```{r}
+mlm.ts4 <- lm(sqrt(IIPI)~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro,TBillClose)))
+summary(mlm.ts4)
+```
+
+```{r}
+shapiro.test(rstandard(mlm.ts4))
+hist(rstandard(mlm.ts4),breaks=20, col="steelblue")
+```
+
+```{r}
+vif(mlm.ts4)
+```
+```{r}
+predict(mlm.ts4, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro,TBillClose)), interval="prediction")
+```
+
+```{r}
+white_lm(mlm.ts4)
+```
+
+
+```{r}
+summary(mlm.ts2)$adj.r.squared
+summary(mlm.ts3)$adj.r.squared
+summary(mlm.ts4)$adj.r.squared
+```
+
+
+## Deterministic Model
+
+```{r}
+df.ts.modelset.deterministic <- df %>% select(-c(Year,Date_form,IIPI_dif,TBillClose,GDP,InfRate,IndPro,M2,UnempRate,Recession)) %>% drop_na()
+
+df.ts.modelset.deterministic$Month
+
+df.ts.modelset.deterministic <- cbind(df.ts.modelset.deterministic,1:length(df.ts.modelset.deterministic$IIPI)) %>% 
+  mutate(index = `1:length(df.ts.modelset.deterministic$IIPI)`,
+         Month = as.factor(Month)) %>%
+  select(index, Month, IIPI)
+
+
+df.ts.modelset.deterministic.test <- df.ts.modelset.deterministic[424:433,]
+df.ts.modelset.deterministic.train <- df.ts.modelset.deterministic[1:423,]
+```
+
+
+## Indicator Variable Model Seasonal Model with Trend
+
+```{r}
+dlm.ts1 <- lm(IIPI~index+Month, data = df.ts.modelset.deterministic.train)
+summary(dlm.ts1)
+```
+
+```{r}
+Box.test(rstandard(dlm.ts1))
+acf(rstandard(dlm.ts1))
+```
+
+```{r}
+kfind <- function(d) {
+  r2adjust <- 0
+  for (k in 1:30){
+    lm_summary_temp <- lm(IIPI~poly(index,k),data = d) %>% summary()
+    print(k)
+    print(lm_summary_temp$adj.r.squared)
+    if (lm_summary_temp$adj.r.squared>r2adjust){
+      k_opt <- k
+    }
+    if(lm_summary_temp$adj.r.squared<=r2adjust){
+      break
+    }
+    r2adjust<-lm_summary_temp$adj.r.squared
+  }
+  return(k_opt)
+}
+
+k <- kfind(df.ts.modelset.deterministic.train)
+
+dlm.ts2 <- lm(IIPI~poly(index,k), data = df.ts.modelset.deterministic.train)
+summary(dlm.ts2)
+```
+
+```{r}
+df.ts.modelset.harmonic <- df.ts.modelset.deterministic %>% select(-Month)
+
+detrend<-lm(IIPI~index, data=df.ts.modelset.deterministic.train)
+periodogram(detrend$residuals)
+
+harmonics <- order(periodogram(detrend$residuals)$spec, decreasing = TRUE)[1:30]
+```
+
+
+```{r}
+listgen <- function(t,j,h,s){
+  sin_df <- tibble(rep(NA,length(t)))
+  cos_df <- tibble(rep(NA,length(t)))
+  for (i in 1:j){
+    sinx = sin(2*pi*t*h[i]/length(s))
+    cosx = cos(2*pi*t*h[i]/length(s))
+    sin_df <- cbind(sin_df,sinx)
+    cos_df <- cbind(cos_df,cosx)
+  }
+  colnames(sin_df) = c('temp',paste('sin',1:j,sep=""))
+  colnames(cos_df) = c('temp',paste('cos',1:j,sep=""))
+  sin_df <- sin_df %>% select(-temp)
+  cos_df <- cos_df %>% select(-temp)
+  df <- cbind(sin_df,cos_df)
+  return(df)
+}
+
+trigf <- listgen(df.ts.modelset.harmonic$index,length(harmonics),harmonics,df.ts.modelset.harmonic$IIPI)
+
+df.ts.modelset.harmonic <- df.ts.modelset.harmonic %>% cbind(trigf)
+
+df.ts.modelset.harmonic.test <- df.ts.modelset.harmonic[424:433,]
+df.ts.modelset.harmonic.train <- df.ts.modelset.harmonic[1:423,]
 ```
 
 ```{r}
