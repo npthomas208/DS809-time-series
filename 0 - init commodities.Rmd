@@ -17,6 +17,7 @@ library(moments)
 library(car)
 library(ggplot2)
 library(TSA)
+library(stringr)
 ```
 
 # Initalialization 
@@ -524,7 +525,7 @@ df.ts.modelset.harmonic <- df.ts.modelset.deterministic %>% select(-Month)
 detrend<-lm(IIPI~index, data=df.ts.modelset.deterministic.train)
 periodogram(detrend$residuals)
 
-harmonics <- order(periodogram(detrend$residuals)$spec, decreasing = TRUE)[1:30]
+harmonics <- order(periodogram(detrend$residuals)$spec, decreasing = TRUE)[1:100]
 ```
 
 
@@ -538,8 +539,8 @@ listgen <- function(t,j,h,s){
     sin_df <- cbind(sin_df,sinx)
     cos_df <- cbind(cos_df,cosx)
   }
-  colnames(sin_df) = c('temp',paste('sin',1:j,sep=""))
-  colnames(cos_df) = c('temp',paste('cos',1:j,sep=""))
+  colnames(sin_df) = c('temp',paste('sin',h,sep=""))
+  colnames(cos_df) = c('temp',paste('cos',h,sep=""))
   sin_df <- sin_df %>% select(-temp)
   cos_df <- cos_df %>% select(-temp)
   df <- cbind(sin_df,cos_df)
@@ -552,6 +553,102 @@ df.ts.modelset.harmonic <- df.ts.modelset.harmonic %>% cbind(trigf)
 
 df.ts.modelset.harmonic.test <- df.ts.modelset.harmonic[424:433,]
 df.ts.modelset.harmonic.train <- df.ts.modelset.harmonic[1:423,]
+```
+
+```{r}
+dlm.ts3<- lm(IIPI~., data = df.ts.modelset.harmonic.train)
+dlm.ts3.summary <-  summary(dlm.ts3)
+which(dlm.ts3.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
+```
+
+```{r}
+termsforassessment <- which(dlm.ts3.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names() %>% tibble()
+sins <- termsforassessment %>% filter(str_detect(.,'sin'))
+coss <- termsforassessment %>% filter(str_detect(.,'cos'))
+
+remove <- intersect(sins$`.` %>% str_extract(.,"(\\d+)"), coss$`.` %>% str_extract(.,"(\\d+)"))
+
+termsforassessment <- termsforassessment$`.`
+termsforremoval1 <- termsforassessment[termsforassessment %in% paste('sin',remove ,sep='')]
+termsforremoval2 <-termsforassessment[termsforassessment %in% paste('cos',remove ,sep='')]
+termsforremoval <- cbind(termsforremoval1,termsforremoval2) %>% c()
+termsforremoval
+```
+
+```{r}
+dlm.ts4<- lm(IIPI~., data = df.ts.modelset.harmonic.train %>% select(-all_of(termsforremoval)))
+dlm.ts4.summary <-  summary(dlm.ts4)
+dlm.ts4.summary
+
+length(df.ts.modelset.harmonic.train) - length(df.ts.modelset.harmonic.train %>% select(-all_of(termsforremoval)) %>% names())
+```
+
+However, this clearly overfits the data.
+
+So as alterative the model is incrementaly increased in terms, until the Adjusted R squared does not increase. 
+
+```{r}
+d = df.ts.modelset.deterministic %>% select(-Month)
+h = harmonics
+
+harmiclmgen <- function(d,harmonics){
+  t <- d$index
+  j <- length(harmonics)
+  h = harmonics
+  r2adj <- list()
+  for (ix in 1:j) {
+    sin_df <- tibble(rep(NA,length(t)))
+    cos_df <- tibble(rep(NA,length(t)))
+      for (i in 1:ix){
+        sinx = sin(2*pi*t*h[i]/length(t))
+        cosx = cos(2*pi*t*h[i]/length(t))
+        sin_df <- cbind(sin_df,sinx)
+        cos_df <- cbind(cos_df,cosx)
+      }
+    colnames(sin_df) = c('temp',paste('sin',h[1:ix],sep=""))
+    colnames(cos_df) = c('temp',paste('cos',h[1:ix],sep=""))
+    sin_df <- sin_df %>% select(-temp)
+    cos_df <- cos_df %>% select(-temp)
+    df <- d %>% cbind(cos_df) %>% cbind(sin_df)  
+    df.train <-  df[1:423,]
+    lms <- lm(IIPI~., data = df.train)
+    lms_sum <- summary(lms)
+    r2adj[ix] <- lms_sum$adj.r.squared
+  }
+  return(list(r2adj = r2adj,numh = 1:ix))
+}
+
+dlm.ts5 <- harmiclmgen(df.ts.modelset.deterministic %>% select(-Month),harmonics)
+
+dlm.ts.r2tlb <-tibble(numh = dlm.ts5$numh %>% unlist(), 
+r2adj = dlm.ts5$r2adj %>% unlist())
+dlm.ts.r2tlb
+```
+
+```{r}
+dlm.ts.r2tlb %>% mutate(lead = lead(r2adj)<r2adj) %>% filter(lead)
+```
+However, the adjusted R-squared does not decrease until using 85 harmonics.
+
+Therefore, instead the visual elbow method is used as alternative.
+
+```{r}
+plot(dlm.ts.r2tlb)
+```
+
+Taking the number of harmonics before the increase in adjusted R-squared to be 15.
+
+```{r}
+trigf1 <- listgen(df.ts.modelset.harmonic$index,15,harmonics[1:15],df.ts.modelset.harmonic$IIPI)
+
+df.ts.modelset.harmonic1 <- df.ts.modelset.deterministic %>% select(-Month) %>% cbind(trigf1)
+
+df.ts.modelset.harmonic.test1 <- df.ts.modelset.harmonic1[424:433,]
+df.ts.modelset.harmonic.train1 <- df.ts.modelset.harmonic1[1:423,]
+
+dlm.ts6<- lm(IIPI~., data = df.ts.modelset.harmonic.train1 )
+dlm.ts6.summary <-  summary(dlm.ts6)
+which(dlm.ts6.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
 ```
 
 ```{r}

@@ -11,6 +11,7 @@ library(dplyr)
 library(car)
 library(skedastic)
 library(kableExtra)
+library(TSA)
 ```
 
 # Introduction and Overview
@@ -607,11 +608,187 @@ periodogram(detrend$residuals)
 
 Unfortunately, the periodogram has such high density at lower harmonics, for the purposes of this project the 30 are first taken.  The model will be reduced iteratively based on partial F-tests.
 
+Therefore, a function is created to create the model using the top 100 harmonics.
 
+```{r eval = FALSE}
+listgen <- function(t,j,h,s){
+  sin_df <- tibble(rep(NA,length(t)))
+  cos_df <- tibble(rep(NA,length(t)))
+  for (i in 1:j){
+    sinx = sin(2*pi*t*h[i]/length(s))
+    cosx = cos(2*pi*t*h[i]/length(s))
+    sin_df <- cbind(sin_df,sinx)
+    cos_df <- cbind(cos_df,cosx)
+  }
+  colnames(sin_df) = c('temp',paste('sin',1:j,sep=""))
+  colnames(cos_df) = c('temp',paste('cos',1:j,sep=""))
+  sin_df <- sin_df %>% select(-temp)
+  cos_df <- cos_df %>% select(-temp)
+  df <- cbind(sin_df,cos_df)
+  return(df)
+}
+
+trigf <- listgen(df.ts.modelset.harmonic$index,length(harmonics),harmonics,df.ts.modelset.harmonic$IIPI)
+```
+
+```{r echo = FALSE}
+head(trigf)
+```
+
+A linear model is estimated with all 200 harmonic terms (one sine and one cosine per harmonic), and those harmonics which have an insignificant coefficient terms are displayed:
+
+```{r echo = FALSE}
+which(dlm.ts3.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
+```
+
+Then those terms which have the same harmonic numeric indicator are removed - ensuring that the full harmonic (both terms are not significant):
+
+```{r eval=FALSE}
+termsforassessment <- which(dlm.ts3.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names() %>% tibble()
+sins <- termsforassessment %>% filter(str_detect(.,'sin'))
+coss <- termsforassessment %>% filter(str_detect(.,'cos'))
+
+remove <- intersect(sins$`.` %>% str_extract(.,"(\\d+)"), coss$`.` %>% str_extract(.,"(\\d+)"))
+
+termsforassessment <- termsforassessment$`.`
+termsforremoval1 <- termsforassessment[termsforassessment %in% paste('sin',remove ,sep='')]
+termsforremoval2 <-termsforassessment[termsforassessment %in% paste('cos',remove ,sep='')]
+termsforremoval <- cbind(termsforremoval1,termsforremoval2) %>% c()
+termsforremoval
+```
+
+```{r eval=FALSE}
+dlm.ts4<- lm(IIPI~., data = df.ts.modelset.harmonic.train %>% select(-all_of(termsforremoval)))
+dlm.ts4.summary <-  summary(dlm.ts4)
+dlm.ts4.summary
+```
 
 ### Model Fit Plot
 
+This initial model though, still overfits the data.
+
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  predict(dlm.ts4,df.ts.modelset.harmonic,interval="prediction")
+confint =  predict(dlm.ts4,df.ts.modelset.harmonic,interval="confidence")
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
+
+plot(df.ts.modelset.harmonic$IIPI, col="lightgray")
+lines(predint[,1],col="red")
+abline(v=424,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
+So as alterative the model is incrementaly increased in terms, until the Adjusted R squared does not increase. 
+
+```{r eval = FALSE}
+d = df.ts.modelset.deterministic %>% select(-Month)
+h = harmonics
+
+harmiclmgen <- function(d,harmonics){
+  t <- d$index
+  j <- length(harmonics)
+  h = harmonics
+  r2adj <- list()
+  for (ix in 1:j) {
+    sin_df <- tibble(rep(NA,length(t)))
+    cos_df <- tibble(rep(NA,length(t)))
+      for (i in 1:ix){
+        sinx = sin(2*pi*t*h[i]/length(t))
+        cosx = cos(2*pi*t*h[i]/length(t))
+        sin_df <- cbind(sin_df,sinx)
+        cos_df <- cbind(cos_df,cosx)
+      }
+    colnames(sin_df) = c('temp',paste('sin',h[1:ix],sep=""))
+    colnames(cos_df) = c('temp',paste('cos',h[1:ix],sep=""))
+    sin_df <- sin_df %>% select(-temp)
+    cos_df <- cos_df %>% select(-temp)
+    df <- d %>% cbind(cos_df) %>% cbind(sin_df)  
+    df.train <-  df[1:423,]
+    lms <- lm(IIPI~., data = df.train)
+    lms_sum <- summary(lms)
+    r2adj[ix] <- lms_sum$adj.r.squared
+  }
+  return(list(r2adj = r2adj,numh = 1:ix))
+}
+
+dlm.ts5 <- harmiclmgen(df.ts.modelset.deterministic %>% select(-Month),harmonics)
+
+dlm.ts.r2tlb <-tibble(numh = dlm.ts5$numh %>% unlist(), 
+r2adj = dlm.ts5$r2adj %>% unlist())
+```
+
+```{r echo=  FALSE}
+dlm.ts.r2tlb
+```
+
+However, the adjusted R-squared does not decrease until using 85 harmonics.
+
+Therefore, instead the visual elbow method is used as alternative.
+
+```{r echo = FALSE}
+plot(dlm.ts.r2tlb)
+```
+
+Taking 15 harmonics before the reduced increse in Adjusted R-squared.
+
+```{r echo = FALSE}
+which(dlm.ts6.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
+```
+
+```{r}
+which(dlm.ts6.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
+```
+
+```{r}
+dlm.ts6.summary
+```
+
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  predict(dlm.ts6,df.ts.modelset.harmonic1,interval="prediction")
+confint =  predict(dlm.ts6,df.ts.modelset.harmonic1,interval="confidence")
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
+
+plot(df.ts.modelset.harmonic1$IIPI, col="lightgray")
+lines(predint[,1],col="red")
+abline(v=424,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  predict(dlm.ts6,df.ts.modelset.harmonic1[400:433,],interval="prediction")
+confint =  predict(dlm.ts6,df.ts.modelset.harmonic1[400:433,],interval="confidence")
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
+
+plot(df.ts.modelset.harmonic1$IIPI[400:433], col="lightgray")
+lines(predint[,1],col="red")
+abline(v=24,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
 ### Residual Assumptions
+
+... use only the 15 variable for all subsequent... 
 
 #### Residual Autocorrelation
 
@@ -651,10 +828,16 @@ r2adjtbl <- tibble(
   Model = c(
     'Linear Model, variable reduced',
     'Deterministic Model, Monthly Indicator with Trend',
-    'Deterministic Model, Polynomial k=5'), 
+    'Deterministic Model, Polynomial k=5',
+    'Deterministic Model, 100 Harmonics',
+    'Deterministic Model, 85 Harmonics',
+    'Deterministic Model, 15 Harmonics'), 
   `Adjusted R-squared` = c(summary(mlm.ts2)$adj.r.squared,
                            summary(dlm.ts1)$adj.r.squared,
-                           summary(dlm.ts2)$adj.r.squared)
+                           summary(dlm.ts2)$adj.r.squared,
+                           summary(dlm.ts3)$adj.r.squared,
+                           summary(dlm.ts4)$adj.r.squared,
+                           summary(dlm.ts6)$adj.r.squared)
 )
 r2adjtbl
 ```
@@ -670,18 +853,27 @@ mapetbl <- tibble(
   Model = c(
     'Linear Model, variable reduced',
     'Deterministic Model, Monthly Indicator with Trend',
-    'Deterministic Model, Polynomial k=5'), 
+    'Deterministic Model, Polynomial k=5',
+    'Deterministic Model, 100 Harmonics',
+    'Deterministic Model, 85 Harmonics',
+    'Deterministic Model, 15 Harmonics'),
   MAPE = c(
     mape(d = df.ts.modelset.test$IIPI, 
          p= predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)), interval="prediction")),
     mape(d = df.ts.modelset.deterministic.test$IIPI, 
          p= predict(dlm.ts1, df.ts.modelset.deterministic.test, interval="prediction")),
     mape(d = df.ts.modelset.deterministic.test$IIPI, 
-         p= predict(dlm.ts2, df.ts.modelset.deterministic.test, interval="prediction"))
+         p= predict(dlm.ts2, df.ts.modelset.deterministic.test, interval="prediction")),
+    mape(d = df.ts.modelset.harmonic.test$IIPI, 
+         p= predict(dlm.ts3, df.ts.modelset.harmonic.test, interval="prediction")),
+    mape(d = df.ts.modelset.harmonic.test$IIPI, 
+         p= predict(dlm.ts4, df.ts.modelset.harmonic.test, interval="prediction")),
+    mape(d = df.ts.modelset.harmonic.test1$IIPI, 
+         p= predict(dlm.ts6, df.ts.modelset.harmonic.test1, interval="prediction")) 
     )
   )
 
-mapetbl %>% kable()
+mapetbl
 
 ```
 
