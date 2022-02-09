@@ -16,11 +16,13 @@ library(TSA)
 
 # Introduction and Overview
 
-This project endeavors to provide example implementation of the various methods outlined in DS809 Time Series to model the commodity Industrial Inputs Price Index from 1980 through 2016. The Industrial Input Price Index, hereafter IIPI, is provided by the IMF in the IMF Primary Commodity Prices Report (*IMF Primary Commodity Prices*, 2021). As a break-out index it does not include energy commodities (Coal, Natural Gas, Spot Crude, Propane) but does include Agricultural raw materials (Cotton, Hides, Rubber, Timber, Wool), metals (Aluminum, Cobalt, Copper, Iron Ore, Lead, Molybdenum, Nickel, Tin, Uranium, and Zinc), and precious metals (Gold, Palladium, Platinum, Silver). The commodity prices used are weighted averages representative of the global market, corrected for volume, as determined by the largest import markets for the commodity constituents. The purpose of the index is to provide a relative value indicator (here indexed to 2005 = 100) for assessment of the commodities in question.
+This project endeavors to provide example implementation of the various methods outlined in DS809 Time Series to model the commodity Industrial Inputs Price Index from 1980 through 2016. The Industrial Input Price Index, hereafter IIPI, is provided by the IMF in the IMF Primary Commodity Prices Report (*IMF Primary Commodity Prices*, 2021). As a break-out index it does not include energy commodities (Coal, Natural Gas, Spot Crude, Propane) but does include Agricultural raw materials (Cotton, Hides, Rubber, Timber, Wool), metals (Aluminum, Cobalt, Copper, Iron Ore, Lead, Molybdenum, Nickel, Tin, Uranium, and Zinc), and precious metals (Gold, Palladium, Platinum, Silver). The commodity prices used are weighted averages representative of the global market, corrected for volume, as determined by the largest import markets for the commodity constituents. The purpose of the index is to provide a relative value indicator (here indexed to 2005 = 100) for assessment of the overall commodities market in question.
 
 The first task performed for this project was to create the time series dataset using *Predictive Dynamics in Commodity Prices* (Gargano & Timmerman, 2012) as a loose framework with select variables therein. These  were collected and organized for subsequent analysis.
 
 A. IIPI (Aliyev, 2020), Dependent Variable and Date index. tags: **IIPI, Date_form**. This dataset defined the time frame of interest (1980-02-01 to 2016-02-01). All other datasets were selected contingent upon their inclusion of this timeframe.
+
+Plot of IIPI as a function of time:
 
 ```{r echo = FALSE}
 p1
@@ -32,7 +34,7 @@ C. US Real GDP (*Real Gross Domestic Product (GDPC1)* \| *FRED* \| *St. Louis Fe
 
 D. US Inflation (*US Inflation Rate by Month*, n.d.). tag: **InfRate**
 
-E. Industrial Production ((*Industrial Production: Total Index (INDPRO)*\| *FRED* \| *St. Louis Fed*, n.d.). tag: **IndPro**
+E. Industrial Production (*Industrial Production: Total Index (INDPRO)*\| *FRED* \| *St. Louis Fed*, n.d.). tag: **IndPro**
 
 F. Money Supply M2, (*BOARD OF GOVERNORS of the FEDERAL RESERVE SYSTEM*, 2021). tag: **M2**
 
@@ -40,31 +42,45 @@ G. US Unemployment, (*Employment and Unemployment*). tag: **UnempRate**
 
 H. Recession, (*Dates of U.S. Recessions as Inferred by GDP-based Recession Indicator*). tag : **Recession**
 
-The index is indicative of global market but this project uses United States specific independent variable values as analog facsimiles for global variables when necessary. This is a recognized short-hand performed here to allow for timely and comprehensive analysis, in the absence of the global datasets for use. United States' trade accounts for the largest percentage (13.5%) of total import trade worldwide (*US Trade - Statistics & Facts*, 2021), and therefore while this is not perfect it is used for the purposes defined here.
+The index is indicative of global market but this project uses United States specific independent variable values as analog facsimiles for global variables. This is a recognized short-hand performed here to allow for timely and comprehensive analysis, in the absence of the global datasets for use. United States' trade accounts for the largest percentage (13.5%) of total import trade worldwide (*US Trade - Statistics & Facts*, 2021), and therefore while this is not perfect it is used for the purposes defined here.
 
-The first rows of the dataset are displayed after collection, cleaning, being joined according to date:
+The first rows of the dataset are displayed after collection, cleaning, and being joined according to date:
 
-```{r echo = FALSE}
+```{r echo = FALSE, size = "tiny"}
 head(df.ts.modelset)
 ```
 
+## Visual Inspection of the Data
+
+The data was decomposed using native R *stats* package to visually assess the potential time series affects of IIPI.
+
+```{r echo = FALSE}
+plot(decompose(df.ts))
+```
+
+## Model assessment strategy
+
+A time series model is as best it can be when the residuals are shown to be a completely white noise process.  This implies that the model has capture all non-stochastic movement of the series with respect to the model independent variables.  Therefore, in this project many models will be developed then immediately abandonded due to a failure to provide white noise residuals.
+
 ## Excluding White Noise Criteria
 
-The first task when considering a dataset for time series analysis is to confirm that the variable of interest and its first difference are not "white noise processes" (WNP).  A WNP is defined by three (3) criteria, all of which must be met to conclude the data is WNP.
+The first task when considering a dataset for time series analysis is to confirm that the variable of interest and its first difference are not white noise processes (WNP).  If they are WNPs then the goal of predicting and assessing the series is complete.  Nothing else can be assessed beyond this point as all movement of the data is presumed to be fully stochastic.  A WNP is defined by three (3) criteria, all of which must be met to conclude the data is WNP.
 
 1) Constant Mean: $E(IIPI_t) = \mu$ for all $t$
 
 2) Constant Variance: $Var(Y_t) = \sigma^2$ for all $t$
 
-3) Autocorrelation is not found at all lags: $\rho_k = 0$ for all $k\geq1$
+3) Autocorrelation is not found at any lags: $\rho_k = 0$ for all $k\geq1$
 
-To show then that a series is not a WNP one must simply prove at least one of these constraints to be false.  
+To show then that a series is not a WNP one must simply prove at least one of these constraints to be false.
+
+This is performed a number of times throughout this project.
 
 ### IIPI White Noise Rejection
 
-The Box-Pierce Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months):
+The Box-Pierce Test is used to confirm the existence of autocorrelation up to a defined maximum lag value (here 36 months):
 
-Hypothesis: $H_0$: All autocorrelctions are zero (0), $H_a$: At least one (1) autocorrelation is not zero (0) 
+$H_0$: All autocorrelctions are zero (0), $H_a$: At least one (1) autocorrelation is not zero (0) 
 
 ```{r echo = FALSE}
 Box.test(df$IIPI,lag=36)
@@ -78,13 +94,15 @@ This is also seen through visual inspection of the ACF chart:
 acf(df$IIPI, lag.max=36)
 ```
 
-Based on the autocorrelation chart displayed one can be confident that there exists autocorrelation to a great degree, across the three years of lag values shown.  The series is non-stationary as seen be by the slow decay in autocorrelation as lag values increase.
+Based on the autocorrelation chart displayed one can be very confident that there exists autocorrelation to a great degree, across the three years of lag values shown.  The series is non-stationary as seen be by the slow decay in autocorrelation as lag values increase.
+
+The series is not a white noise process.
 
 ### IIPI First Difference White Noise Process Rejection
 
-Again, the Box-Pierce Q-statistic Test is used to confirm the existance of autocorrelation up to a defined maximum lag value (here 36 months) for also the first difference:
+Again, the Box-Pierce Q-statistic Test is used to confirm the existence of autocorrelation up to a defined maximum lag value (here 36 months) for also the first difference:
 
-Hypothesis: $H_0$: All autocorrelctions are zero (0), $H_a$: At least one (1) autocorrelation is not zero (0) 
+$H_0$: All autocorrelctions are zero (0), $H_a$: At least one (1) autocorrelation is not zero (0) 
 
 ```{r echo = FALSE}
 Box.test(df$IIPI_dif,lag=36)
@@ -98,15 +116,7 @@ This is also seen through visual inspection of the ACF chart:
 acf(df$IIPI_dif, lag.max=36)
 ```
 
-The first difference of the data is stationary as can be seen in the fast decay in autocorrelation.  It is not white noise due to the autocorrelations mostly at lags 1 and 2.
-
-## Visual Inspection of the Data
-
-The data was decomposed using native R *stats* package and to visually assess the potential time series affects of IIPI.
-
-```{r echo = FALSE}
-plot(decompose(df.ts))
-```
+The first difference of the data is stationary as can be seen in the fast decay in autocorrelation, however, it is not white noise due to the autocorrelations mostly at lags 1, 2, 24, 28, 29, and 36.
 
 # Regression Models
 
@@ -114,7 +124,7 @@ plot(decompose(df.ts))
 
 A multiple linear regression is estimated:
 
-$$IIPI(`r names(mlm.ts$coefficients)[2:length(names(mlm.ts$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_2 GDP  + \beta_3 InfRate + \beta_4 IndPro + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+$IIPI(`r names(mlm.ts$coefficients)[2:length(names(mlm.ts$coefficients))] %>% paste(sep = " ")`) = \hat{\beta}_0 + \hat{\beta}_1 TBillCLose + \hat{\beta}_2 GDP  + \hat{\beta}_3 InfRate + \hat{\beta}_4 IndPro + \hat{\beta}_5 M2 + \hat{\beta}_6 UnempRate + \hat{\beta}_7 Recession + \epsilon_t$
 
 The summary and analysis of these coefficients is not performed here, due to failure of all residual assumptions, as follows.
 
@@ -142,20 +152,26 @@ $H_0$: Series are normally distributed. vs. $H_a$: Series are not normally distr
 
 The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that the series are not normally distributed.
 
+The residuals are therefore not white noise. There other assumption verfications are performed to ensure fully rigorous analysis, however are technically unnecessary given this result. 
+
 #### Residual Autocorrelation
 
 The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
 
 ```{r}
 Box.test(rstandard(mlm.ts), lag=36)
-acf(rstandard(mlm.ts))
+
 ```
 
 $H_0$: $\rho_1=\rho_2=\rho_k=0$ (all autocorrelations are zero). vs. $H_a$: at least one $\rho_k \neq 0$ (at least one autocorrealtion is not zero)
 
 The residuals are highly autocorrelated and non-stationary.  This model can be improved greatly, as there still appears to be time series information not captured in this model.
 
-The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that at least one lag value returns a statistically significant autocorrelation.
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that at least one lag value returns a statistically significant autocorrelation, as seen below:
+
+```{r}
+acf(rstandard(mlm.ts))
+```
 
 #### Constant Variance
 
@@ -167,11 +183,11 @@ white_lm(mlm.ts, interactions = TRUE)
 
 $H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is Heteroscedasticity (no constant variance)
 
-The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series.
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the residuals.
 
 ### Initial Regression, ResidualSummary
 
-All the residual assumptions failed for this initial regression.  Subsequent methods and analysis is required to remediate the complexities presented by this dataset.
+All the residual assumptions failed for this initial regression.  Subsequent methods and analysis are required to evaluate the complexities presented by this dataset.
 
 In conjunction with resolving the residual assumptions, the variance inflation factors are computed to identify any multi-collinearities.  
 
@@ -181,15 +197,15 @@ vif(mlm.ts)
 
 Ten (10) is the typically accepted subjective value at which a variance inflation factor is considered high.  GDP, IndPro and M2 all exceed this limit.
 
-A new linear model is therefore estimated without GDP, which has the highest VIF.
+A new linear model is therefore estimated without GDP, which has the highest variance inflation factor.
 
 ## Regression without GDP
 
 The following multiple linear regression model is estimated:
 
-$$IIPI(`r names(mlm.ts1$coefficients)[2:length(names(mlm.ts1$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_4 IndPro + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+$IIPI(`r names(mlm.ts1$coefficients)[2:length(names(mlm.ts1$coefficients))] %>% paste(sep = " ")`) = \hat{\beta}_0 + \hat{\beta}_1 TBillCLose + \hat{\beta}_3 InfRate + \hat{\beta}_4 IndPro + \hat{\beta}_5 M2 + \hat{\beta}_6 UnempRate + \hat{\beta}_7 Recession + \epsilon_t$
 
-, which results in the following estimated $\beta$ values:
+, which results in the following estimated $\hat{\beta}$ values:
 
 ```{r echo = FALSE}
 mlm.ts1$coefficients
@@ -197,7 +213,7 @@ mlm.ts1$coefficients
 
 Again, summary and analysis of these coefficients is not performed here due to failure of all residual assumptions, as follows.
 
-Now, to continue improving the model by reducing inter independent variable multicollinarity, the variance inflation factors are computed.
+Now, to continue improving the model by reducing inter- independent variable multicollinarity, the variance inflation factors are again computed before proceeding to assess the residual assumptions.
 
 ```{r echo = FALSE}
 vif(mlm.ts1)
@@ -211,9 +227,9 @@ A new linear model is therefore estimated without GDP and IndPro.
 
 The following multiple linear regression model is estimated:
 
-$$IIPI(`r names(mlm.ts2$coefficients)[2:length(names(mlm.ts2$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+$IIPI(`r names(mlm.ts2$coefficients)[2:length(names(mlm.ts2$coefficients))] %>% paste(sep = " ")`) = \hat{\beta}_0 + \hat{\beta}_1 TBillCLose + \hat{\beta}_3 InfRate + \hat{\beta}_5 M2 + \hat{\beta}_6 UnempRate + \hat{\beta}_7 Recession + \epsilon_t$
 
-, which results in the following estimated $\beta$ values:
+, which results in the following estimated $\hat{\hat{\beta}}$ values:
 
 ```{r echo = FALSE}
 mlm.ts2$coefficients
@@ -281,7 +297,7 @@ The following is the autcorrelation function (ACF) chart:
 acf(rstandard(mlm.ts2))
 ```
 
-This slow decay and magnitude of the autocorrelations indicate this is a non-stationary process.  This model does not capture all the time series related information. Further model improvement is necessary. 
+This slow decay of the autocorrelations indicate this is a non-stationary process.  This model does not capture all the time series related information. Further model improvement is necessary. 
 
 #### Constant Variance
 
@@ -301,7 +317,7 @@ All the residual assumptions failed for the regression excluding GDP and IndPro.
 
 ### Model Summary
 
-Despite the failure of the residual assumptions a brief summary is provided of the coefficient interpretations, if the assumptions had be met for completeness.
+Despite the failure of the residual assumptions a brief summary is provided of the coefficient interpretations, if the assumptions had been met for completeness.
 
 ```{r}
 summary(mlm.ts2)
@@ -309,7 +325,7 @@ summary(mlm.ts2)
 
 All following statements should be seen within the context of "if the residual assumptions were met, then..."
 
-- The expected value of IIPI if all independent variables are zero is approximately zero (0) as the p-value for the intercept as the p-value is not significant.   
+- The expected value of IIPI if all independent variables are zero is approximately zero (0) as the p-value for the intercept is not significant.   
 
 - The expected change in the value of IIPI, ceteris paribus, for each unit change in treasury bill close is approximately zero (0) as the p-value for this coefficient is not significant.
 
@@ -322,11 +338,11 @@ All following statements should be seen within the context of "if the residual a
 - The expected change in the value of IIPI, ceteris paribus, if the market cycle is indicated as being in recession is `r mlm.ts2$coefficients[6]`
 
 
-## Regression without GDP and IndPro, and with variance stabilizing functions natural log.
+## Regression without GDP and IndPro, and with variance stabilizing function, natural log.
 
 The following multiple linear regression model is estimated:
 
-$$ln(IIPI)(`r names(mlm.ts3$coefficients)[2:length(names(mlm.ts3$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+$ln(IIPI)(`r names(mlm.ts3$coefficients)[2:length(names(mlm.ts3$coefficients))] %>% paste(sep = " ")`) = \hat{\beta}_0 + \hat{\beta}_1 TBillCLose + \hat{\beta}_3 InfRate + \hat{\beta}_5 M2 + \hat{\beta}_6 UnempRate + \hat{\beta}_7 Recession + \epsilon_t$
 
 ### Model Fit Plot
 
@@ -362,14 +378,14 @@ The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one mu
 
 ### Model Summary
 
-The intrepatbility of the model coefficients within the context of actual units of IIPI has been obscured by the natural log function.  Therefore, if interpretability of the model is prefered then the without any variance stabilizatoin is recommended.
+The interpretability of the model coefficients within the context of actual units of IIPI has been obscured by the natural log function and the residual assumptions failed  - therefore the model coefficients are not interpreted here.
 
 
-## Regression without GDP and IndPro, and with variance stabilizing function: square-root
+## Regression without GDP and IndPro, and with variance stabilizing function, square-root
 
 The following multiple linear regression model is estimated:
 
-$$\sqrt{IIPI}(`r names(mlm.ts4$coefficients)[2:length(names(mlm.ts4$coefficients))] %>% paste(sep = " ")`) = \beta_0 + \beta_1 TBillCLose + \beta_3 InfRate + \beta_5 M2 + \beta_6 UnempRate + \beta_7 Recession + \epsilon_t$$
+$\sqrt{IIPI(`r names(mlm.ts4$coefficients)[2:length(names(mlm.ts4$coefficients))] %>% paste(sep = " ")`)} = \hat{\beta}_0 + \hat{\beta}_1 TBillCLose + \hat{\beta}_3 InfRate + \hat{\beta}_5 M2 + \hat{\beta}_6 UnempRate + \hat{\beta}_7 Recession + \epsilon_t$
 
 ### Model Fit Summary
 
@@ -403,9 +419,7 @@ white_lm(mlm.ts4, interactions = TRUE)
 
 $H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is Heteroscedasticity (no constant variance)
 
-The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series. Applying the square-rrot conversion did not resolve the issue with heteroskedasticity.
-
-All subsequent models exclude GDP and IndPro.
+The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that there exists non-constant variance within the series. Applying the square-root conversion did not resolve the issue with heteroskedasticity.
 
 # Deterministic Models
 
@@ -413,7 +427,7 @@ All subsequent models exclude GDP and IndPro.
 
 A month indicator variable linear regression is estimated, correcting for linear time trend:
 
-$$IIPI(`r names(dlm.ts1$coefficients)[2:4] %>% paste(sep = " ")`,...,`r names(dlm.ts1$coefficients)[13]`) = \beta_0 + \beta_1 t + \beta_{1+i}\sum_{i=1}^{12}Monthi +  \epsilon_t$$
+$IIPI(`r names(dlm.ts1$coefficients)[2:4] %>% paste(sep = " ")`,...,`r names(dlm.ts1$coefficients)[13]`) = \hat{\beta}_0 + \hat{\beta}_1 t + \hat{\beta}_{1+i}\sum_{i=1}^{12} Month_i +  \epsilon_t$
 
 ### Model Fit Plot
 
@@ -488,11 +502,11 @@ If the residual assumptions were confirmed then one could interpret the t-test p
 
 A polynomial linear regression is estimated:
 
-$$IIPI(t) = \beta_0 + \beta_1 t + \beta_{2}t^2 + ...+ \beta_{k}t^k + \epsilon_t$$
+$$IIPI(t) = \hat{\beta}_0 + \hat{\beta}_1 t + \hat{\beta}_{2}t^2 + ...+ \hat{\beta}_{k}t^k + \epsilon_t$$
 
-The highest order model which does not result in an increase in the adjusted R-squared.   This was found using the following funtion:
+The highest order model which does not result in an increase in the adjusted R-squared was found using the following function:
 
-```{r eval=FALSE, echo=FALSE}
+```{r eval=FALSE}
 kfind <- function(d) {
   r2adjust <- 0
   for (k in 1:30){
@@ -510,6 +524,8 @@ kfind <- function(d) {
   return(k_opt)
 }
 ```
+
+This occurs at:
 
 $$k = 5$$
 
@@ -560,7 +576,7 @@ hist(rstandard(dlm.ts2))
 shapiro.test(rstandard(dlm.ts2))
 ```
 
-As can be seen, and is confirmed by the Shapiro-Wilk test, the residuals of the model are not normally distributed....
+As can be seen, and is confirmed by the Shapiro-Wilk test, the residuals of the model are not normally distributed.
 
 #### Constant Variance
 
@@ -570,7 +586,7 @@ White's test for Heteroscedasticity is performed to confirm constant variance:
 white_lm(dlm.ts2, interactions = TRUE)
 ```
 
-... Residuals do not have constant variance.
+Finally the residuals are also seen to display constant variance.
 
 ### Model Summary
 
@@ -578,9 +594,9 @@ white_lm(dlm.ts2, interactions = TRUE)
 summary(dlm.ts2)
 ```
 
-If the residual assumptions were found to be true could interpret the coefficients as follows. All p-values indicate significance .
+If the residual assumptions were found to be true one could interpret the coefficients as follows. All p-values indicate significance (though the residual distribution assumptions fail making interpretation dubious).
 
-- The expected value of IIPI at time =0 are zero is `r dlm.ts2$coefficients[1]`.   
+- The expected value of IIPI at time zero (Feb, 1980) is `r dlm.ts2$coefficients[1]`.   
 
 - The expected change in the value of IIPI, ceteris paribus, for each unit change the time index is `r dlm.ts2$coefficients[2]`.
 
@@ -596,19 +612,19 @@ If the residual assumptions were found to be true could interpret the coefficien
 
 A de-trended harmonic model is estimated:
 
-$$IIPI(t) = \beta_0 + \beta_1 t + \sum{\alpha_isin(\frac{2\pi i}{s}t)} + \sum{\beta_icos(\frac{2\pi i}{s}t)} + \epsilon_t$$
+$IIPI(t) = \hat{\beta}_0 + \hat{\beta}_1 t + \sum{\hat{\alpha_i}sin(\frac{2\pi i}{s}t)} + \sum{\hat{\beta}_icos(\frac{2\pi i}{s}t)} + \epsilon_t$
 
 ### Periodogram
 
-First IIPI is de-trended then, in order to determine the harmonics, a periodogram is reviewed:
+To determine the harmonics, a periodogram is reviewed:
 
 ```{r echo = FALSE}
 periodogram(detrend$residuals)
 ```
 
-Unfortunately, the periodogram has such high density at lower harmonics, for the purposes of this project the 30 are first taken.  The model will be reduced iteratively based on partial F-tests.
+Unfortunately, the periodogram has such high density at lower harmonics the number of peaks is not readily countable. 
 
-Therefore, a function is created to create the model using the top 100 harmonics.
+Therefore, a function is created to create the model using the top 100 harmonics.  While this expected to be an over estimate, the model harmonic terms are subsequently removed by evaluating that the sine and cosine pair are both not significant in the model 
 
 ```{r eval = FALSE}
 listgen <- function(t,j,h,s){
@@ -635,7 +651,7 @@ trigf <- listgen(df.ts.modelset.harmonic$index,length(harmonics),harmonics,df.ts
 head(trigf)
 ```
 
-A linear model is estimated with all 200 harmonic terms (one sine and one cosine per harmonic), and those harmonics which have an insignificant coefficient terms are displayed:
+A linear model is estimated with all 200 harmonic terms (one sine and one cosine per harmonic), and those harmonics which have an insignificant (p is greater than 0.05) coefficient terms are displayed:
 
 ```{r echo = FALSE}
 which(dlm.ts3.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
@@ -657,15 +673,15 @@ termsforremoval <- cbind(termsforremoval1,termsforremoval2) %>% c()
 termsforremoval
 ```
 
-```{r eval=FALSE}
-dlm.ts4<- lm(IIPI~., data = df.ts.modelset.harmonic.train %>% select(-all_of(termsforremoval)))
-dlm.ts4.summary <-  summary(dlm.ts4)
+The names of the terms are saved to a vector and subsequently removed from the model:
+
+```{r echo=FALSE}
 dlm.ts4.summary
 ```
 
 ### Model Fit Plot
 
-This initial model though, still overfits the data.
+This initial model with 85 harmonics significantly overfits the data.
 
 ```{r echo = FALSE}
 #Plotting the confidence and prediction intervals
@@ -685,12 +701,9 @@ lines(conflower,col="blue")
 lines(confupper,col="blue")
 ```
 
-So as alterative the model is incrementaly increased in terms, until the Adjusted R squared does not increase. 
+So as alterative the model is incrementaly increased in terms, until the adjusted R-squared does not increase. 
 
 ```{r eval = FALSE}
-d = df.ts.modelset.deterministic %>% select(-Month)
-h = harmonics
-
 harmiclmgen <- function(d,harmonics){
   t <- d$index
   j <- length(harmonics)
@@ -720,35 +733,75 @@ harmiclmgen <- function(d,harmonics){
 
 dlm.ts5 <- harmiclmgen(df.ts.modelset.deterministic %>% select(-Month),harmonics)
 
-dlm.ts.r2tlb <-tibble(numh = dlm.ts5$numh %>% unlist(), 
-r2adj = dlm.ts5$r2adj %>% unlist())
+dlm.ts.r2tlb <- tibble(numh = dlm.ts5$numh %>% unlist(), 
+r2adj = dlm.ts5$r2adj %>% unlist(), bic = dlm.ts5$bic %>% unlist(), aic = dlm.ts5$aic %>% unlist())
 ```
 
-```{r echo=  FALSE}
-dlm.ts.r2tlb
-```
 
-However, the adjusted R-squared does not decrease until using 85 harmonics.
-
-Therefore, instead the visual elbow method is used as alternative.
+The three in-sample metrics are displayed as a function of increaing harmonics:
 
 ```{r echo = FALSE}
-plot(dlm.ts.r2tlb)
+plot(dlm.ts.r2tlb$r2adj)
+plot(dlm.ts.r2tlb$bic)
+plot(dlm.ts.r2tlb$aic)
 ```
 
-Taking 15 harmonics before the reduced increse in Adjusted R-squared.
-
-```{r echo = FALSE}
-which(dlm.ts6.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
-```
+Using BIC for in-sample model assessment, 65 sine and cosine pairs appears to be possibly optimal.
 
 ```{r}
-which(dlm.ts6.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
+dlm.ts.r2tlb$bic %>% which.min()
 ```
+
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  predict(dlm.ts7,df.ts.modelset.harmonic2,interval="prediction")
+confint =  predict(dlm.ts7,df.ts.modelset.harmonic2,interval="confidence")
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
+
+plot(df.ts.modelset.harmonic2$IIPI, col="lightgray")
+lines(predint[,1],col="red")
+abline(v=424,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
+```{r echo = FALSE}
+#Plotting the confidence and prediction intervals
+predint =  predict(dlm.ts7,df.ts.modelset.harmonic2[400:433,],interval="prediction")
+confint =  predict(dlm.ts7,df.ts.modelset.harmonic2[400:433,],interval="confidence")
+predlower = predint[,2]
+predupper = predint[,3]
+conflower = confint[,2]
+confupper = confint[,3]
+
+plot(df.ts.modelset.harmonic2$IIPI[400:433], col="lightgray",ylim = c(50,170))
+lines(predint[,1],col="red")
+abline(v=24,col="blue", lty=5)
+lines(predlower,col="orange")
+lines(predupper,col="orange")
+lines(conflower,col="blue")
+lines(confupper,col="blue")
+```
+
+However, this appears to still overfit the data, therefore instead the visual elbow method is used for adjusted R-squared metric.
+
+Taking 15 harmonics before the reduced rate of increase in adjusted R-squared a linear model is estimated:
 
 ```{r}
 dlm.ts6.summary
 ```
+
+Only two trigonomtric terms (not of the same harmonic) are not significant.
+
+```{r echo = FALSE}
+which(dlm.ts6.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
+```
+Therefore, this model is used going forward for comparison.
 
 ```{r echo = FALSE}
 #Plotting the confidence and prediction intervals
@@ -786,18 +839,50 @@ lines(conflower,col="blue")
 lines(confupper,col="blue")
 ```
 
-### Residual Assumptions
-
-... use only the 15 variable for all subsequent... 
+### Residual Assumptions (model with 15 harmonics)
 
 #### Residual Autocorrelation
 
+The Box-Pierce test is performed to identify if the residuals are autocorrelated for the model with 15 harmonics: 
+
+```{r}
+Box.test(rstandard(dlm.ts6), lag=36)
+```
+
+$H_0$: $\rho_1=\rho_2=\rho_k=0$ (all autocorrelations are zero). vs. $H_a$: at least one $\rho_k \neq 0$ (at least one autocorrealtion is not zero)
+
+```{r}
+acf(rstandard(dlm.ts6))
+```
+
+The residuals appear stationary but not white noise.
+
 #### Residual Normality
+
+The Shapiro-Wilk Test is performed to verify residual normality:
+
+```{r}
+hist(rstandard(dlm.ts6))
+shapiro.test(rstandard(dlm.ts6))
+```
+
+As can be seen, and is confirmed by the Shapiro-Wilk test, the residuals of the model are not normally distributed.
 
 #### Constant Variance
 
+White's test for Heteroscedasticity is performed to confirm constant variance:
+
+```{r}
+white_lm(dlm.ts6, interactions = TRUE)
+```
+
+$H_0$: There is no Heteroscedasticity (constant variance) vs. $H_a$: There is Heteroscedasticity (no constant variance)
+
+The resulting p-value is much greater than 0.05, therefore $H_0$ is accepted, and one can conclude that there is constant variance within the series.
+
 ### Model Summary
 
+The harmonic deterministic model with 15 harmonics, resolves the issue of residual heteroskedasticity, but still fails the normality and autocorrelation assumptions.
 
 # XXXXXX Model [SECTION]
 
@@ -821,43 +906,31 @@ lines(confupper,col="blue")
 
 # Model Comparisions
 
-### In-sample Comparisons
+### In-sample and Predictive Comparisons
 
 ```{r echo=FALSE, warings=FALSE}
-r2adjtbl <- tibble(
+
+mape <- function(d,p){
+  mean(abs(d-p)/d)
+}
+
+comparetable <- tibble(
   Model = c(
     'Linear Model, variable reduced',
     'Deterministic Model, Monthly Indicator with Trend',
     'Deterministic Model, Polynomial k=5',
     'Deterministic Model, 100 Harmonics',
     'Deterministic Model, 85 Harmonics',
-    'Deterministic Model, 15 Harmonics'), 
+    'Deterministic Model, 15 Harmonics',
+    'Deterministic Model, 65 Harmonics'), 
   `Adjusted R-squared` = c(summary(mlm.ts2)$adj.r.squared,
                            summary(dlm.ts1)$adj.r.squared,
                            summary(dlm.ts2)$adj.r.squared,
                            summary(dlm.ts3)$adj.r.squared,
                            summary(dlm.ts4)$adj.r.squared,
-                           summary(dlm.ts6)$adj.r.squared)
-)
-r2adjtbl
-```
-
-### MAPE Prediction Comparison
-
-```{r echo=FALSE, warings=FALSE}
-mape <- function(d,p){
-  mean(abs(d-p)/d)
-}
-
-mapetbl <- tibble(
-  Model = c(
-    'Linear Model, variable reduced',
-    'Deterministic Model, Monthly Indicator with Trend',
-    'Deterministic Model, Polynomial k=5',
-    'Deterministic Model, 100 Harmonics',
-    'Deterministic Model, 85 Harmonics',
-    'Deterministic Model, 15 Harmonics'),
-  MAPE = c(
+                           summary(dlm.ts6)$adj.r.squared,
+                           summary(dlm.ts7)$adj.r.squared),
+    MAPE = c(
     mape(d = df.ts.modelset.test$IIPI, 
          p= predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)), interval="prediction")),
     mape(d = df.ts.modelset.deterministic.test$IIPI, 
@@ -869,12 +942,12 @@ mapetbl <- tibble(
     mape(d = df.ts.modelset.harmonic.test$IIPI, 
          p= predict(dlm.ts4, df.ts.modelset.harmonic.test, interval="prediction")),
     mape(d = df.ts.modelset.harmonic.test1$IIPI, 
-         p= predict(dlm.ts6, df.ts.modelset.harmonic.test1, interval="prediction")) 
+         p= predict(dlm.ts6, df.ts.modelset.harmonic.test1, interval="prediction")),
+    mape(d = df.ts.modelset.harmonic.test2$IIPI, 
+         p= predict(dlm.ts7, df.ts.modelset.harmonic.test2, interval="prediction"))
     )
-  )
-
-mapetbl
-
+)
+comparetable
 ```
 
 

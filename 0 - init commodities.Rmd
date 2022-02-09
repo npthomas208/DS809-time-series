@@ -588,14 +588,13 @@ However, this clearly overfits the data.
 So as alterative the model is incrementaly increased in terms, until the Adjusted R squared does not increase. 
 
 ```{r}
-d = df.ts.modelset.deterministic %>% select(-Month)
-h = harmonics
-
 harmiclmgen <- function(d,harmonics){
   t <- d$index
   j <- length(harmonics)
   h = harmonics
   r2adj <- list()
+  bic <- list()
+  aic <- list()
   for (ix in 1:j) {
     sin_df <- tibble(rep(NA,length(t)))
     cos_df <- tibble(rep(NA,length(t)))
@@ -614,14 +613,16 @@ harmiclmgen <- function(d,harmonics){
     lms <- lm(IIPI~., data = df.train)
     lms_sum <- summary(lms)
     r2adj[ix] <- lms_sum$adj.r.squared
+    bic[ix] <- BIC(lms)
+    aic[ix] <- AIC(lms)
   }
-  return(list(r2adj = r2adj,numh = 1:ix))
+  return(list(numh = 1:ix,r2adj = r2adj,bic = bic, aic = aic))
 }
 
 dlm.ts5 <- harmiclmgen(df.ts.modelset.deterministic %>% select(-Month),harmonics)
 
-dlm.ts.r2tlb <-tibble(numh = dlm.ts5$numh %>% unlist(), 
-r2adj = dlm.ts5$r2adj %>% unlist())
+dlm.ts.r2tlb <- tibble(numh = dlm.ts5$numh %>% unlist(), 
+r2adj = dlm.ts5$r2adj %>% unlist(), bic = dlm.ts5$bic %>% unlist(), aic = dlm.ts5$aic %>% unlist())
 dlm.ts.r2tlb
 ```
 
@@ -633,10 +634,12 @@ However, the adjusted R-squared does not decrease until using 85 harmonics.
 Therefore, instead the visual elbow method is used as alternative.
 
 ```{r}
-plot(dlm.ts.r2tlb)
+plot(dlm.ts.r2tlb$r2adj)
+plot(dlm.ts.r2tlb$bic)
+plot(dlm.ts.r2tlb$aic)
 ```
 
-Taking the number of harmonics before the increase in adjusted R-squared to be 15.
+Taking the number of harmonics before the reduced rate of increase in adjusted R-squared to be 15.
 
 ```{r}
 trigf1 <- listgen(df.ts.modelset.harmonic$index,15,harmonics[1:15],df.ts.modelset.harmonic$IIPI)
@@ -650,6 +653,21 @@ dlm.ts6<- lm(IIPI~., data = df.ts.modelset.harmonic.train1 )
 dlm.ts6.summary <-  summary(dlm.ts6)
 which(dlm.ts6.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
 ```
+
+```{r}
+trigf2 <- listgen(df.ts.modelset.harmonic$index,65,harmonics[1:65],df.ts.modelset.harmonic$IIPI)
+
+df.ts.modelset.harmonic2 <- df.ts.modelset.deterministic %>% select(-Month) %>% cbind(trigf2)
+
+df.ts.modelset.harmonic.test2 <- df.ts.modelset.harmonic2[424:433,]
+df.ts.modelset.harmonic.train2 <- df.ts.modelset.harmonic2[1:423,]
+
+dlm.ts7<- lm(IIPI~., data = df.ts.modelset.harmonic.train2 )
+dlm.ts7.summary <-  summary(dlm.ts7)
+which(dlm.ts7.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
+```
+
+
 
 ```{r}
 save.image()
