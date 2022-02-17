@@ -667,7 +667,87 @@ dlm.ts7.summary <-  summary(dlm.ts7)
 which(dlm.ts7.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
 ```
 
+```{r}
+df.ts.modelset
+df.ts.modelset.test 
+df.ts.modelset.train 
+```
 
+```{r}
+acf(df.ts.modelset$IIPI)
+```
+
+Non-statoinary...
+
+```{r}
+acf(diff(df.ts.modelset$IIPI))
+```
+
+Stationary but with periodic decay
+
+```{r}
+pacf(diff(df.ts.modelset$IIPI))
+```
+
+Also shows periodic decay.
+
+Therefore, ARIMA(>0,1,>0)
+
+```{r}
+arima111 <- arima(df.ts.modelset$IIPI, order = c(1,1,1))
+arima111
+```
+
+```{r}
+arima212 <- arima(df.ts.modelset$IIPI, order = c(2,1,2))
+arima212
+```
+
+```{r}
+arima212 <- arima(df.ts.modelset$IIPI, order = c(1,1,2))
+arima212
+```
+
+```{r}
+arima212 <- arima(df.ts.modelset$IIPI, order = c(2,1,1))
+arima212
+```
+
+```{r}
+arima2510 <- arima(df.ts.modelset$IIPI, order = c(25,1,0))
+arima2510
+```
+
+```{r}
+
+arima_aic_find <- function(){
+  p_index <- list()
+  q_index <- list()
+  arima_aic <- list
+  for (p in 0:20){
+    for (q in 0:20){
+      if(p = 0){
+        p_index <- p_index %>% append(p)
+        q_index <- q_index %>% append(q)
+        arima_aic <- arima_aic %>% append(arima(df.ts.modelset$IIPI, order = c(p,1,q))$aic)
+      }
+      if (q = 0){
+        p_index <- p_index %>% append(p)
+        q_index <- q_index %>% append(q)
+        arima_aic <- arima_aic %>% append(arima(df.ts.modelset$IIPI, order = c(p,1,q))$aic)
+      }
+      if ((p+q) <= 4){
+        p_index <- p_index %>% append(p)
+        q_index <- q_index %>% append(q)
+        arima_aic <- arima_aic %>% append(arima(df.ts.modelset$IIPI, order = c(p,1,q))$aic)        
+      }
+    }
+  }
+  return(tibble(p_index,q_index,arima_aic))
+}
+
+arima_table <- arima_aic_find()
+```
 
 ```{r}
 save.image()

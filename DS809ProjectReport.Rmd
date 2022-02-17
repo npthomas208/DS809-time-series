@@ -12,6 +12,7 @@ library(car)
 library(skedastic)
 library(kableExtra)
 library(TSA)
+library(tseries)
 ```
 
 # Introduction and Overview
@@ -883,6 +884,50 @@ The resulting p-value is much greater than 0.05, therefore $H_0$ is accepted, an
 ### Model Summary
 
 The harmonic deterministic model with 15 harmonics, resolves the issue of residual heteroskedasticity, but still fails the normality and autocorrelation assumptions.
+
+# Stochastic Model
+
+First, before fitting a stochastic model investigation must result in a stationary ACF - based on recusive tranformation to induce stationarity.
+
+```{r}
+acf(df.ts.modelset$IIPI)
+```
+
+As can be seen the raw dataset is not stationary.
+
+Taking the first difference:
+
+```{r}
+acf(diff(df.ts.modelset$IIPI))
+```
+
+results in stationary with periodic exponential decay.
+
+Having acheived stationarity at the first difference, the PACF is reviewed:
+
+```{r}
+pacf(diff(df.ts.modelset$IIPI))
+```
+
+This also appears to have periodic decay.
+
+Starting with investigating an ARIMA(1,1,1) - given that ACF and PACF show periodicity and stationarity was acheived at the frist difference.
+
+
+
+## ... Model
+
+### Model Fit Plot
+
+### Residual Assumptions
+
+#### Residual Autocorrelation
+
+#### Residual Normality
+
+#### Constant Variance
+
+### Model Summary
 
 # XXXXXX Model [SECTION]
 
