@@ -13,6 +13,7 @@ library(skedastic)
 library(kableExtra)
 library(TSA)
 library(tseries)
+library(ggplot2)
 ```
 
 # Introduction and Overview
@@ -145,7 +146,7 @@ Before proceeding with model interpretation the regression residual assumptions 
 
 The Shapiro-Wilk Test is performed to verify residual normality:
 
-```{r}
+```{r echo = FALSE}
 shapiro.test(rstandard(mlm.ts))
 ```
 
@@ -159,7 +160,7 @@ The residuals are therefore not white noise. There other assumption verfications
 
 The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
 
-```{r}
+```{r echo = FALSE}
 Box.test(rstandard(mlm.ts), lag=36)
 
 ```
@@ -170,7 +171,7 @@ The residuals are highly autocorrelated and non-stationary.  This model can be i
 
 The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one must conclude that at least one lag value returns a statistically significant autocorrelation, as seen below:
 
-```{r}
+```{r echo = FALSE}
 acf(rstandard(mlm.ts))
 ```
 
@@ -178,7 +179,7 @@ acf(rstandard(mlm.ts))
 
 White's test for Heteroscedasticity is performed to confirm constant variance:
 
-```{r}
+```{r echo = FALSE}
 white_lm(mlm.ts, interactions = TRUE)
 ```
 
@@ -272,7 +273,7 @@ Therefore the residual assumptions are tested, as follows.
 
 The Shapiro-Wilk Test is performed to verify residual normality:
 
-```{r}
+```{r echo = FALSE}
 shapiro.test(rstandard(mlm.ts2))
 ```
 
@@ -284,7 +285,7 @@ The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one mu
 
 The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
 
-```{r}
+```{r echo = FALSE}
 Box.test(rstandard(mlm.ts2), lag=36)
 ```
 
@@ -294,7 +295,7 @@ The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one mu
 
 The following is the autcorrelation function (ACF) chart:
 
-```{r}
+```{r echo = FALSE}
 acf(rstandard(mlm.ts2))
 ```
 
@@ -304,7 +305,7 @@ This slow decay of the autocorrelations indicate this is a non-stationary proces
 
 White's test for Heteroscedasticity is performed to confirm constant variance:
 
-```{r}
+```{r echo = FALSE}
 white_lm(mlm.ts2, interactions = TRUE)
 ```
 
@@ -320,7 +321,7 @@ All the residual assumptions failed for the regression excluding GDP and IndPro.
 
 Despite the failure of the residual assumptions a brief summary is provided of the coefficient interpretations, if the assumptions had been met for completeness.
 
-```{r}
+```{r echo = FALSE}
 summary(mlm.ts2)
 ```
 
@@ -339,7 +340,7 @@ All following statements should be seen within the context of "if the residual a
 - The expected change in the value of IIPI, ceteris paribus, if the market cycle is indicated as being in recession is `r mlm.ts2$coefficients[6]`
 
 
-## Regression without GDP and IndPro, and with variance stabilizing function, natural log.
+## Regression without GDP, IndPro, TBillClose, and with variance stabilizing function, natural log.
 
 The following multiple linear regression model is estimated:
 
@@ -369,7 +370,7 @@ lines(confupper,col="blue")
 
 White's test for Heteroscedasticity is performed to confirm constant variance:
 
-```{r}
+```{r echo = FALSE}
 white_lm(mlm.ts3, interactions = TRUE)
 ```
 
@@ -382,7 +383,7 @@ The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one mu
 The interpretability of the model coefficients within the context of actual units of IIPI has been obscured by the natural log function and the residual assumptions failed  - therefore the model coefficients are not interpreted here.
 
 
-## Regression without GDP and IndPro, and with variance stabilizing function, square-root
+## Regression without GDP, IndPro, TBillClose, and with variance stabilizing function, square-root
 
 The following multiple linear regression model is estimated:
 
@@ -414,7 +415,7 @@ lines(confupper,col="blue")
 
 White's test for Heteroscedasticity is performed to confirm constant variance:
 
-```{r}
+```{r echo = FALSE}
 white_lm(mlm.ts4, interactions = TRUE)
 ```
 
@@ -456,13 +457,13 @@ lines(confupper,col="blue")
 
 The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
 
-```{r}
+```{r echo = FALSE}
 Box.test(rstandard(dlm.ts1))
 ```
 
 $H_0$ is rejected.  Autocorrelation is present in the series.
 
-```{r}
+```{r echo = FALSE}
 acf(rstandard(dlm.ts1))
 ```
 
@@ -472,7 +473,7 @@ Again, this residuals are highly autoccorrelated and non-stationary. Other metho
 
 The Shapiro-Wilk Test is performed to verify residual normality:
 
-```{r}
+```{r echo = FALSE}
 hist(rstandard(dlm.ts1))
 shapiro.test(rstandard(dlm.ts1))
 ```
@@ -483,7 +484,7 @@ As can be seen, and is confirmed by the Shapiro-Wilk test, the residuals of the 
 
 White's test for Heteroscedasticity is performed to confirm constant variance:
 
-```{r}
+```{r echo = FALSE}
 white_lm(dlm.ts1, interactions = TRUE)
 ```
 
@@ -491,7 +492,7 @@ $H_0$ is accepted, therefore allowing one to conclude that the residuals have co
 
 ### Model Summary
 
-```{r}
+```{r echo = FALSE}
 summary(dlm.ts1)
 ```
 
@@ -556,13 +557,13 @@ lines(confupper,col="blue")
 
 The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
 
-```{r}
+```{r echo = FALSE}
 Box.test(rstandard(dlm.ts2))
 ```
 
 $H_0$ is rejected.  Autocorrelation is present in the series.
 
-```{r}
+```{r echo = FALSE}
 acf(rstandard(dlm.ts2))
 ```
 
@@ -572,7 +573,7 @@ Again, the residuals are highly autoccorrelated and non-stationary.  More work i
 
 The Shapiro-Wilk Test is performed to verify residual normality:
 
-```{r}
+```{r echo = FALSE}
 hist(rstandard(dlm.ts2))
 shapiro.test(rstandard(dlm.ts2))
 ```
@@ -583,7 +584,7 @@ As can be seen, and is confirmed by the Shapiro-Wilk test, the residuals of the 
 
 White's test for Heteroscedasticity is performed to confirm constant variance:
 
-```{r}
+```{r echo = FALSE}
 white_lm(dlm.ts2, interactions = TRUE)
 ```
 
@@ -591,7 +592,7 @@ Finally the residuals are also seen to display constant variance.
 
 ### Model Summary
 
-```{r}
+```{r echo = FALSE}
 summary(dlm.ts2)
 ```
 
@@ -749,7 +750,7 @@ plot(dlm.ts.r2tlb$aic)
 
 Using BIC for in-sample model assessment, 65 sine and cosine pairs appears to be possibly optimal.
 
-```{r}
+```{r echo = FALSE}
 dlm.ts.r2tlb$bic %>% which.min()
 ```
 
@@ -793,7 +794,7 @@ However, this appears to still overfit the data, therefore instead the visual el
 
 Taking 15 harmonics before the reduced rate of increase in adjusted R-squared a linear model is estimated:
 
-```{r}
+```{r echo = FALSE}
 dlm.ts6.summary
 ```
 
@@ -846,13 +847,13 @@ lines(confupper,col="blue")
 
 The Box-Pierce test is performed to identify if the residuals are autocorrelated for the model with 15 harmonics: 
 
-```{r}
+```{r echo = FALSE}
 Box.test(rstandard(dlm.ts6), lag=36)
 ```
 
 $H_0$: $\rho_1=\rho_2=\rho_k=0$ (all autocorrelations are zero). vs. $H_a$: at least one $\rho_k \neq 0$ (at least one autocorrealtion is not zero)
 
-```{r}
+```{r echo = FALSE}
 acf(rstandard(dlm.ts6))
 ```
 
@@ -862,7 +863,7 @@ The residuals appear stationary but not white noise.
 
 The Shapiro-Wilk Test is performed to verify residual normality:
 
-```{r}
+```{r echo = FALSE}
 hist(rstandard(dlm.ts6))
 shapiro.test(rstandard(dlm.ts6))
 ```
@@ -873,7 +874,7 @@ As can be seen, and is confirmed by the Shapiro-Wilk test, the residuals of the 
 
 White's test for Heteroscedasticity is performed to confirm constant variance:
 
-```{r}
+```{r echo = FALSE}
 white_lm(dlm.ts6, interactions = TRUE)
 ```
 
@@ -885,11 +886,13 @@ The resulting p-value is much greater than 0.05, therefore $H_0$ is accepted, an
 
 The harmonic deterministic model with 15 harmonics, resolves the issue of residual heteroskedasticity, but still fails the normality and autocorrelation assumptions.
 
-# Stochastic Model
+# Stochastic Models
+
+## ARIMA Models
 
 First, before fitting a stochastic model investigation must result in a stationary ACF - based on recusive tranformation to induce stationarity.
 
-```{r}
+```{r echo = FALSE}
 acf(df.ts.modelset$IIPI)
 ```
 
@@ -897,7 +900,7 @@ As can be seen the raw dataset is not stationary.
 
 Taking the first difference:
 
-```{r}
+```{r echo = FALSE}
 acf(diff(df.ts.modelset$IIPI))
 ```
 
@@ -905,7 +908,7 @@ results in stationary with periodic exponential decay.
 
 Having acheived stationarity at the first difference, the PACF is reviewed:
 
-```{r}
+```{r echo = FALSE}
 pacf(diff(df.ts.modelset$IIPI))
 ```
 
@@ -920,7 +923,7 @@ In reviewing the ACF and PACF there are three proposed reasonable ARIMA models f
 This assessment is validated using an subset search of p and q values:
 
 ```{r echo=FALSE}
-ggplot(arima_table, aes(x = p_index, y = q_index, fill = arima_aic)) + 
+ggplot(arima_table1, aes(x = p_index, y = q_index, fill = arima_aic)) + 
   geom_tile(color = "black") + 
   scale_fill_gradientn(colors = hcl.colors(20,"RdYlGn")) + 
   coord_fixed()
@@ -929,7 +932,7 @@ ggplot(arima_table, aes(x = p_index, y = q_index, fill = arima_aic)) +
 The expected listed models resulted in the lowest AIC values:
 
 ```{r echo=FALSE}
-arima_table %>% arrange(arima_aic) %>% head(3)
+arima_table1 %>% arrange(arima_aic) %>% head(3)
 ```
 
 All three are estimated and retained for comparison given their comparable AICs.
@@ -947,9 +950,6 @@ As can be seen above, all coefficients are signifcant for each model is signific
 In-sample fit and 20 step ahead predictions:
 
 ```{r echo = FALSE}
-pred.arima210nahead <- df.ts.modelset.train$IIPI - (arima210$residuals %>% unlist())
-pred.arima210nahead <- pred.arima %>% append(predict(arima210, n.ahead = 10)$pred)
-
 plot(df.ts.modelset$IIPI, col="lightgray")
 title("ARIMA(2,1,0)")
 lines(pred.arima210nahead,col="red")
@@ -958,7 +958,7 @@ abline(v=424,col="blue", lty=5)
 
 Zooming in on the prediction region:
 
-```{r}
+```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[424:433], col="black", ylim = c(105,140))
 title("ARIMA(2,1,0) n ahead")
 lines(pred.arima210nahead[424:433],col="red")
@@ -967,18 +967,16 @@ abline(v=424,col="blue", lty=5)
 
 However when looking at on-step head values, the prediciton clearly performs much better:
 
-```{r}
+```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[424:433], col="black")
 title("ARIMA(2,1,0) 1 ahead")
 lines(pred.arima2101step,col="red")
 abline(v=424,col="blue", lty=5)
-
 ```
 
-```{r echo = FALSE}
-pred.arima111nahead <- df.ts.modelset.train$IIPI - (arima111$residuals %>% unlist())
-pred.arima111nahead <- pred.arima %>% append(predict(arima111, n.ahead = 10)$pred)
+Next, looking at the alternative ARIMA(1,1,1)
 
+```{r echo = FALSE}
 plot(df.ts.modelset$IIPI, col="lightgray")
 title("ARIMA(1,1,1)")
 lines(pred.arima111nahead,col="red")
@@ -987,7 +985,7 @@ abline(v=424,col="blue", lty=5)
 
 Zooming in on the prediction region:
 
-```{r}
+```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[424:433], col="black", ylim = c(105,140))
 title("ARIMA(1,1,1) n ahead")
 lines(pred.arima111nahead[424:433],col="red")
@@ -996,7 +994,7 @@ abline(v=424,col="blue", lty=5)
 
 However when looking at on-step head values, the prediciton clearly performs much better:
 
-```{r}
+```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[424:433], col="black")
 title("ARIMA(1,1,1) 1 ahead")
 lines(pred.arima1111step,col="red")
@@ -1006,35 +1004,151 @@ abline(v=424,col="blue", lty=5)
 
 Performing similarly well to the ARIMA(2,1,0) model.
 
-### Confirming white noise
+### Confirming White Noise
 
-```{r}
+```{r echo = FALSE}
 acf(arima210$residuals)
 Box.test(arima210$residuals, lag=20)
 ```
 
-```{r}
+```{r echo = FALSE}
 acf(arima111$residuals)
 Box.test(arima111$residuals, lag=20)
 ```
 
 Both ar marginally white noise based on the above Box-Pierce test.
 
+## Stoachastic Residual Correction for Regression Model
+
+The residuals were not stationary, therefore the first difference is taken as then confirmed for stationarity:
+
+```{r echo = FALSE}
+acf(diff(mlm.ts4$residuals))
+```
+
+Next the PACF is investigated for ARIMA parameter confirmation:
+
+```{r echo = FALSE}
+pacf(diff(mlm.ts4$residuals))
+```
+
+As both appear potentially cuff off without clear seasonal spikes a search is performed for reasonable $p$ and $q$s
+
+```{r echo=FALSE}
+ggplot(arima_table3 %>% filter(p_index != 0), aes(x = p_index, y = q_index, fill = arima_aic)) + 
+  geom_tile(color = "black") + 
+  scale_fill_gradientn(colors = hcl.colors(20,"RdYlGn")) + 
+  coord_fixed()
+```
+
+Therefore an ARIMA(3,0,0) is fit to the residuals:
+
+```{r echo = FALSE}
+mlm.ts2.arima300
+```
+
+However, all the regression coefficients become insignificant except InfRate.
+
+### Model Fit Plot
+
+```{r echo = FALSE}
+plot(df.ts.modelset$IIPI, col="lightgray")
+title("ARIMA(1,1,1)")
+lines(pred.arima111nahead,col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+Zooming in on the prediction region:
+
+```{r echo = FALSE}
+plot(df.ts.modelset$IIPI[424:433], col="black", ylim = c(105,140))
+title("ARIMA(1,1,1) n ahead")
+lines(pred.arima111nahead[424:433],col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+However when looking at on-step head values, the prediciton clearly performs much better:
+
+```{r echo = FALSE}
+plot(df.ts.modelset$IIPI[424:433], col="black")
+title("ARIMA(1,1,1) 1 ahead")
+lines(pred.arima1111step,col="red")
+abline(v=424,col="blue", lty=5)
+
+```
+
+### Confirming White Noise
+
+```{r echo = FALSE}
+acf(mlm.ts2.arima300$residuals)
+Box.test(mlm.ts2.arima300$residuals, lag=20)
+```
+
+The residuals are just barely white noise.
+
 ## Stochastic Residual Correction for Harmonic Model
 
 First, as a reminder the residuals were very clearly auto-correlated:
 
-```{r}
-acf(rstandard(dlm.ts6))
+```{r echo = FALSE}
+acf(dlm.ts6$residuals)
 ```
 
 So the ARIMA residual correction is leveraged.  The PACF is investigated to review appropriate model:
 
-```{r}
-pacf(rstandard(dlm.ts6))
+```{r echo = FALSE}
+pacf(dlm.ts6$residuals)
 ```
 
 Expecting a low order AR model or possibly ARIMA model is best.  Stationarity does not need to be induced as the residuals are already stationary.
+
+```{r echo=FALSE}
+ggplot(arima_table2, aes(x = p_index, y = q_index, fill = arima_aic)) + 
+  geom_tile(color = "black") + 
+  scale_fill_gradientn(colors = hcl.colors(20,"RdYlGn")) + 
+  coord_fixed()
+```
+
+Using ARIMA(2,0,1) on the residuals results in:
+
+```{r echo = FALSE}
+dlm.ts6.arima201
+```
+
+Only one pair of harmonic terms (sin22 and cos22) have been made insignificant by this addition.
+
+The AIC has been clearly improved:
+
+Harmonic Model: `r AIC(dlm.ts6)`
+
+Harmonic Model with residual ARIMA correction: `r dlm.ts6.arima201$aic`
+
+### Confirming White Noise
+
+```{r echo = FALSE}
+acf(dlm.ts6.arima201$residuals)
+Box.test(dlm.ts6.arima201$residuals, lag=20)
+```
+
+The residuals are not white noise.
+
+## Generalized Autoregressive conditionally Heteroscedastic Model (GARCH)
+
+Using the ARIMA(1,1,1) residuals first to check for GARCH model potential:
+
+```{r}
+acf(arima111$residuals)
+Box.test(arima111$residuals)
+
+acf(arima111$residuals^2)
+Box.test(arima111$residuals^2)
+```
+
+As can be seen the original ARIMA(1,1,1) model residuals are white noise, but the squared residuals are not.  This is an excellent candidate for using GARCH.
+
+```{r}
+garchFit(~arma(1,1)+garch(1,1),data=diff(coh94), trace=FALSE)
+```
 
 ## ... Model
 
@@ -1068,8 +1182,6 @@ Expecting a low order AR model or possibly ARIMA model is best.  Stationarity do
 
 
 
-
-
 # Model Comparisions
 
 ### In-sample and Predictive Comparisons
@@ -1088,32 +1200,72 @@ comparetable <- tibble(
     'Deterministic Model, 100 Harmonics',
     'Deterministic Model, 85 Harmonics',
     'Deterministic Model, 15 Harmonics',
-    'Deterministic Model, 65 Harmonics'), 
+    'Deterministic Model, 65 Harmonics',
+    'ARIMA(2,1,0) n ahead',
+    'ARIMA(1,1,1) n ahead',
+    'ARIMA(0,1,5) n ahead',
+    'ARIMA(2,1,0) seq. 1 ahead',
+    'ARIMA(1,1,1) seq. 1 ahead',
+    'ARIMA(0,1,5) seq. 1 ahead',
+    'Linear Model, v.r., residual ARIMA, n ahead',
+    'Linear Model, v.r., residual ARIMA, seq. 1 ahead',
+    'Harmonic Model, residual ARIMA, n ahead',
+    'Harmonic Model, residual ARIMA, seq. 1 ahead'), 
   `Adjusted R-squared` = c(summary(mlm.ts2)$adj.r.squared,
                            summary(dlm.ts1)$adj.r.squared,
                            summary(dlm.ts2)$adj.r.squared,
                            summary(dlm.ts3)$adj.r.squared,
                            summary(dlm.ts4)$adj.r.squared,
                            summary(dlm.ts6)$adj.r.squared,
-                           summary(dlm.ts7)$adj.r.squared),
+                           summary(dlm.ts7)$adj.r.squared,
+                           NA,
+                           NA,
+                           NA,
+                           NA,
+                           NA,
+                           NA,
+                           NA,
+                           NA,
+                           NA,
+                           NA),
     MAPE = c(
     mape(d = df.ts.modelset.test$IIPI, 
-         p= predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)), interval="prediction")),
+         p = predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)))),
     mape(d = df.ts.modelset.deterministic.test$IIPI, 
-         p= predict(dlm.ts1, df.ts.modelset.deterministic.test, interval="prediction")),
+         p = predict(dlm.ts1, df.ts.modelset.deterministic.test)),
     mape(d = df.ts.modelset.deterministic.test$IIPI, 
-         p= predict(dlm.ts2, df.ts.modelset.deterministic.test, interval="prediction")),
+         p = predict(dlm.ts2, df.ts.modelset.deterministic.test)),
     mape(d = df.ts.modelset.harmonic.test$IIPI, 
-         p= predict(dlm.ts3, df.ts.modelset.harmonic.test, interval="prediction")),
+         p = predict(dlm.ts3, df.ts.modelset.harmonic.test)),
     mape(d = df.ts.modelset.harmonic.test$IIPI, 
-         p= predict(dlm.ts4, df.ts.modelset.harmonic.test, interval="prediction")),
+         p = predict(dlm.ts4, df.ts.modelset.harmonic.test)),
     mape(d = df.ts.modelset.harmonic.test1$IIPI, 
-         p= predict(dlm.ts6, df.ts.modelset.harmonic.test1, interval="prediction")),
+         p = predict(dlm.ts6, df.ts.modelset.harmonic.test1)),
     mape(d = df.ts.modelset.harmonic.test2$IIPI, 
-         p= predict(dlm.ts7, df.ts.modelset.harmonic.test2, interval="prediction"))
-    )
+         p = predict(dlm.ts7, df.ts.modelset.harmonic.test2)),
+    mape(d = df.ts.modelset.test$IIPI, 
+         p = predict(arima210, n.ahead =10)$pred),
+    mape(d = df.ts.modelset.test$IIPI, 
+         p = predict(arima111, n.ahead =10)$pred),    
+    mape(d = df.ts.modelset.test$IIPI, 
+         p = predict(arima015, n.ahead =10)$pred),
+    mape(d = df.ts.modelset.test$IIPI, 
+         p = pred.arima2101step),
+    mape(d = df.ts.modelset.test$IIPI, 
+         p = pred.arima1111step),
+    mape(d = df.ts.modelset.test$IIPI, 
+         p = pred.arima0151step),
+    mape(d = df.ts.modelset.test$IIPI,
+         p = pred.mlm.ts2.arima300nahead),
+    mape(d = df.ts.modelset.test$IIPI,
+         p = pred.mlm.ts2.arima3001step),
+    mape(d = df.ts.modelset.test$IIPI,
+         p = pred.dlm.ts6.arima201nahead),
+    mape(d = df.ts.modelset.test$IIPI,
+         p = pred.dlm.ts6.arima2011step)
+      )
 )
-comparetable
+comparetable %>% arrange(MAPE)
 ```
 
 

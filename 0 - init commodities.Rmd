@@ -20,6 +20,7 @@ library(TSA)
 library(stringr)
 library(ggplot2)
 library(reshape2)
+library(fGarch)
 ```
 
 # Initalialization 
@@ -720,19 +721,19 @@ arima_aic_find <- function(){
   return(tibble(p_index,q_index,arima_aic))
 }
 
-arima_table <- arima_aic_find() %>% unnest() %>% unique()
-arima_table
+arima_table1 <- arima_aic_find() %>% unnest() %>% unique()
+arima_table1
 ```
 
 ```{r}
-ggplot(arima_table, aes(x = p_index, y = q_index, fill = arima_aic)) + 
+ggplot(arima_table1, aes(x = p_index, y = q_index, fill = arima_aic)) + 
   geom_tile(color = "black") + 
   scale_fill_gradientn(colors = hcl.colors(20,"RdYlGn")) + 
   coord_fixed()
 ```
 
 ```{r}
-arima_table %>% arrange(arima_aic) %>% head(3)
+arima_table1 %>% arrange(arima_aic) %>% head(3)
 ```
 
 ```{r}
@@ -774,6 +775,28 @@ pred.arima1111step <- predictions_armatemp %>% unlist()
 ```
 
 ```{r}
+predictions_armatemp <- list()
+
+y = df.ts.modelset.train$IIPI
+
+for (i in 1:(dim(df.ts.modelset.test)[1])){
+  armatemp <- arima(y, order = c(0, 1, 5))
+  predictions_armatemp[[i]] <- predict(armatemp, n.ahead = 1)$pred
+  y <- y %>% append(df.ts.modelset.test[i,'IIPI']) %>% unlist()
+}
+
+pred.arima0151step <- predictions_armatemp %>% unlist()
+```
+
+```{r}
+pred.arima111nahead <- df.ts.modelset.train$IIPI - (arima111$residuals %>% unlist())
+pred.arima111nahead <- pred.arima111nahead %>% append(predict(arima111, n.ahead = 10)$pred)
+
+pred.arima210nahead <- df.ts.modelset.train$IIPI - (arima210$residuals %>% unlist())
+pred.arima210nahead <- pred.arima111nahead %>% append(predict(arima210, n.ahead = 10)$pred)
+```
+
+```{r}
 arima_aic_find_param <- function(d,diff){
   p_index <- list()
   q_index <- list()
@@ -800,15 +823,84 @@ arima_aic_find_param <- function(d,diff){
   return(tibble(p_index,q_index,arima_aic))
 }
 
-arima_table <- arima_aic_find_param(rstandard(dlm.ts6),0) %>% unnest() %>% unique()
-arima_table
+arima_table2 <- arima_aic_find_param(dlm.ts6$residuals,0) %>% unnest() %>% unique()
+
+arima_table2 %>% arrange(arima_aic) %>% head(3)
 ```
 
 ```{r}
-dlm.ts6.arima211 <- arima(coh94_tranformed, order =c(2,1,1), xreg = data1 %>% select(-coh94))
-arima211reg
+dlm.ts6.arima201 <- arima(df.ts.modelset.harmonic.train1$IIPI, order =c(2,0,1), xreg = df.ts.modelset.harmonic.train1 %>% select(-c('IIPI')))
+dlm.ts6.arima201
+
+pred.dlm.ts6.arima201nahead <- predict(dlm.ts6.arima201,n.ahead = 10, new = data.frame(df.ts.modelset.harmonic.test1 %>%select(-c('IIPI'))))$pred
 ```
 
+```{r}
+predictions_armatemp <- list()
+
+y = df.ts.modelset.harmonic.train1$IIPI
+x = df.ts.modelset.harmonic.train1 %>% select(-c('IIPI'))
+for (i in 1:(dim(df.ts.modelset.harmonic.test1)[1])){
+  armatemp <- arima(y, order = c(2, 0, 1), xreg = x)
+  predictions_armatemp[[i]] <- predict(armatemp, new = df.ts.modelset.harmonic.test1[i,] %>% select(-c('IIPI')))$pred
+  y <- y %>% append(df.ts.modelset.harmonic.test1[i,'IIPI']) %>% unlist()
+  x <- x %>% rbind(df.ts.modelset.harmonic.test1[i,] %>% select(-c('IIPI')))
+}
+
+pred.dlm.ts6.arima2011step <- predictions_armatemp %>% unlist()
+pred.dlm.ts6.arima2011step
+```
+
+```{r}
+arima_table3 <- arima_aic_find_param(mlm.ts3$residuals,0) %>% unnest() %>% unique()
+arima_table3  %>% arrange(arima_aic) %>% head(3)
+```
+
+```{r}
+mlm.ts2.arima300 <- arima(df.ts.modelset.train$IIPI, order =c(3,0,0), xreg = df.ts.modelset.train %>% select(-c('Date_form','IIPI','GDP','IndPro')))
+mlm.ts2.arima300
+
+pred.mlm.ts2.arima300nahead <- predict(mlm.ts2.arima300,n.ahead = 10, new = data.frame(df.ts.modelset.test %>%select(-c('Date_form','IIPI','GDP','IndPro'))))$pred
+```
+
+
+```{r}
+predictions_armatemp <- list()
+
+y = df.ts.modelset.train$IIPI
+x = df.ts.modelset.train %>% select(-c('Date_form','IIPI','GDP','IndPro'))
+for (i in 1:(dim(df.ts.modelset.test)[1])){
+  armatemp <- arima(y, order = c(3, 0, 0), xreg = x)
+  predictions_armatemp[[i]] <- predict(armatemp, new = df.ts.modelset.test[i,] %>% select(-c('Date_form','IIPI','GDP','IndPro')))$pred
+  y <- y %>% append(df.ts.modelset.test[i,'IIPI']) %>% unlist()
+  x <- x %>% rbind(df.ts.modelset.test[i,] %>% select(-c('Date_form','IIPI','GDP','IndPro')))
+}
+
+pred.mlm.ts2.arima3001step <- predictions_armatemp %>% unlist()
+pred.mlm.ts2.arima3001step
+```
+
+```{r}
+q=1
+p=0
+
+garch_search <- function(d){
+  p_index <- list()
+  q_index <- list()
+  arima_aic <- list()
+  for (q in 1:2){
+    for (p in 0:2){
+      ztemp<-garchFit(~arma(1,1)+garch(q,p),data=d, trace=FALSE) %>% summary()
+      p_index <- p_index %>% append(p)
+      q_index <- q_index %>% append(p)
+      arima_aic <- arima_aic %>% append(ztemp@fit$ics['AIC']*length(d))
+    }
+  }
+  return(tibble(q_index,p_index,arima_aic))
+}
+
+garch_table1 <- garch_search(d = diff(df.ts.modelset.train$IIPI))
+```
 
 ```{r}
 save.image()
