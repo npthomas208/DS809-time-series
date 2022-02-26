@@ -1147,8 +1147,10 @@ Box.test(arima111$residuals^2)
 As can be seen the original ARIMA(1,1,1) model residuals are white noise, but the squared residuals are not.  This is an excellent candidate for using GARCH.
 
 ```{r}
-garchFit(~arma(1,1)+garch(1,1),data=diff(coh94), trace=FALSE)
+pacf(arima111$residuals^2)
 ```
+
+
 
 ## ... Model
 
