@@ -762,7 +762,7 @@ predupper = predint[,3]
 conflower = confint[,2]
 confupper = confint[,3]
 
-plot(df.ts.modelset.harmonic2$IIPI, col="lightgray")
+plot(df.ts.modelset.harmonic2$IIPI, col="black")
 lines(predint[,1],col="red")
 abline(v=424,col="blue", lty=5)
 lines(predlower,col="orange")
@@ -780,7 +780,7 @@ predupper = predint[,3]
 conflower = confint[,2]
 confupper = confint[,3]
 
-plot(df.ts.modelset.harmonic2$IIPI[400:433], col="lightgray",ylim = c(50,170))
+plot(df.ts.modelset.harmonic2$IIPI[400:433], col="black",ylim = c(50,170))
 lines(predint[,1],col="red")
 abline(v=24,col="blue", lty=5)
 lines(predlower,col="orange")
@@ -831,7 +831,7 @@ predupper = predint[,3]
 conflower = confint[,2]
 confupper = confint[,3]
 
-plot(df.ts.modelset.harmonic1$IIPI[400:433], col="lightgray")
+plot(df.ts.modelset.harmonic1$IIPI[400:433], col="black")
 lines(predint[,1],col="red")
 abline(v=24,col="blue", lty=5)
 lines(predlower,col="orange")
@@ -909,11 +909,132 @@ Having acheived stationarity at the first difference, the PACF is reviewed:
 pacf(diff(df.ts.modelset$IIPI))
 ```
 
-This also appears to have periodic decay.
+In reviewing the ACF and PACF there are three proposed reasonable ARIMA models for investigation:
 
-Starting with investigating an ARIMA(1,1,1) - given that ACF and PACF show periodicity and stationarity was acheived at the frist difference.
+- ARIMA(2,1,0) due to perceived cutoff of the PACF at 2, and interpretable exponenital decay of the ACF.
 
+- ARIMA(0,1,5) due to percevied cutoff of the ACF at 5, and interpretable exponential decay of the PACF.
 
+- ARIMA(x,1,y) due to the perceived exponential decay of both ACF and PACF, most likely being x and y = {1,2}
+
+This assessment is validated using an subset search of p and q values:
+
+```{r echo=FALSE}
+ggplot(arima_table, aes(x = p_index, y = q_index, fill = arima_aic)) + 
+  geom_tile(color = "black") + 
+  scale_fill_gradientn(colors = hcl.colors(20,"RdYlGn")) + 
+  coord_fixed()
+```
+
+The expected listed models resulted in the lowest AIC values:
+
+```{r echo=FALSE}
+arima_table %>% arrange(arima_aic) %>% head(3)
+```
+
+All three are estimated and retained for comparison given their comparable AICs.
+
+```{r echo=FALSE}
+arima210
+arima111
+arima015
+```
+
+As can be seen above, all coefficients are signifcant for each model is significant except $\theta_3$ and $\theta_4$ of the MA(5) model.  Therefore this one is dropped for evaluation going forward.
+
+### Model Fit Plots
+
+In-sample fit and 20 step ahead predictions:
+
+```{r echo = FALSE}
+pred.arima210nahead <- df.ts.modelset.train$IIPI - (arima210$residuals %>% unlist())
+pred.arima210nahead <- pred.arima %>% append(predict(arima210, n.ahead = 10)$pred)
+
+plot(df.ts.modelset$IIPI, col="lightgray")
+title("ARIMA(2,1,0)")
+lines(pred.arima210nahead,col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+Zooming in on the prediction region:
+
+```{r}
+plot(df.ts.modelset$IIPI[424:433], col="black", ylim = c(105,140))
+title("ARIMA(2,1,0) n ahead")
+lines(pred.arima210nahead[424:433],col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+However when looking at on-step head values, the prediciton clearly performs much better:
+
+```{r}
+plot(df.ts.modelset$IIPI[424:433], col="black")
+title("ARIMA(2,1,0) 1 ahead")
+lines(pred.arima2101step,col="red")
+abline(v=424,col="blue", lty=5)
+
+```
+
+```{r echo = FALSE}
+pred.arima111nahead <- df.ts.modelset.train$IIPI - (arima111$residuals %>% unlist())
+pred.arima111nahead <- pred.arima %>% append(predict(arima111, n.ahead = 10)$pred)
+
+plot(df.ts.modelset$IIPI, col="lightgray")
+title("ARIMA(1,1,1)")
+lines(pred.arima111nahead,col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+Zooming in on the prediction region:
+
+```{r}
+plot(df.ts.modelset$IIPI[424:433], col="black", ylim = c(105,140))
+title("ARIMA(1,1,1) n ahead")
+lines(pred.arima111nahead[424:433],col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+However when looking at on-step head values, the prediciton clearly performs much better:
+
+```{r}
+plot(df.ts.modelset$IIPI[424:433], col="black")
+title("ARIMA(1,1,1) 1 ahead")
+lines(pred.arima1111step,col="red")
+abline(v=424,col="blue", lty=5)
+
+```
+
+Performing similarly well to the ARIMA(2,1,0) model.
+
+### Confirming white noise
+
+```{r}
+acf(arima210$residuals)
+Box.test(arima210$residuals, lag=20)
+```
+
+```{r}
+acf(arima111$residuals)
+Box.test(arima111$residuals, lag=20)
+```
+
+Both ar marginally white noise based on the above Box-Pierce test.
+
+## Stochastic Residual Correction for Harmonic Model
+
+First, as a reminder the residuals were very clearly auto-correlated:
+
+```{r}
+acf(rstandard(dlm.ts6))
+```
+
+So the ARIMA residual correction is leveraged.  The PACF is investigated to review appropriate model:
+
+```{r}
+pacf(rstandard(dlm.ts6))
+```
+
+Expecting a low order AR model or possibly ARIMA model is best.  Stationarity does not need to be induced as the residuals are already stationary.
 
 ## ... Model
 
@@ -956,7 +1077,7 @@ Starting with investigating an ARIMA(1,1,1) - given that ACF and PACF show perio
 ```{r echo=FALSE, warings=FALSE}
 
 mape <- function(d,p){
-  mean(abs(d-p)/d)
+  mean(abs((d-p)/d))
 }
 
 comparetable <- tibble(
