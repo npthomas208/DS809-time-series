@@ -21,6 +21,7 @@ library(stringr)
 library(ggplot2)
 library(reshape2)
 library(fGarch)
+library(doParallel)
 ```
 
 # Initalialization 
@@ -133,7 +134,7 @@ Based on the p-value above, the residuals of the model with respect to time have
 
 ```{r}
 df <- df %>% 
-  mutate(IIPI_dif = IIPI - lag(IIPI)) %>%
+  mutate(IIPI_dif = IIPI - dplyr::lag(IIPI)) %>%
   drop_na()
 ```
 
@@ -419,7 +420,7 @@ vif(mlm.ts2)
 predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)), interval="prediction")
 ```
 ```{r}
-mlm.ts3 <- lm(log(IIPI)~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro,TBillClose)))
+mlm.ts3 <- lm(log(IIPI)~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro)))
 ```
 
 ```{r}
@@ -432,7 +433,7 @@ vif(mlm.ts3)
 ```
 
 ```{r}
-predict(mlm.ts3, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro,TBillClose)), interval="prediction")
+predict(mlm.ts3, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)), interval="prediction")
 ```
 
 ```{r}
@@ -440,7 +441,7 @@ white_lm(mlm.ts3)
 ```
 
 ```{r}
-mlm.ts4 <- lm(sqrt(IIPI)~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro,TBillClose)))
+mlm.ts4 <- lm(sqrt(IIPI)~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro)))
 summary(mlm.ts4)
 ```
 
@@ -453,7 +454,7 @@ hist(rstandard(mlm.ts4),breaks=20, col="steelblue")
 vif(mlm.ts4)
 ```
 ```{r}
-predict(mlm.ts4, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro,TBillClose)), interval="prediction")
+predict(mlm.ts4, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)), interval="prediction")
 ```
 
 ```{r}
@@ -500,25 +501,21 @@ acf(rstandard(dlm.ts1))
 
 ```{r}
 kfind <- function(d) {
-  r2adjust <- 0
-  for (k in 1:30){
+  r2adjust <- list()
+  k_index <- list()
+  aic_list <- list()
+  for (k in 1:15){
     lm_summary_temp <- lm(IIPI~poly(index,k),data = d) %>% summary()
-    print(k)
-    print(lm_summary_temp$adj.r.squared)
-    if (lm_summary_temp$adj.r.squared>r2adjust){
-      k_opt <- k
-    }
-    if(lm_summary_temp$adj.r.squared<=r2adjust){
-      break
-    }
-    r2adjust<-lm_summary_temp$adj.r.squared
+    k_index <- k_index %>% append(k)
+    r2adjust <- r2adjust %>% append(lm_summary_temp$adj.r.squared)
+    aic_list <- aic_list %>% append(AIC(lm(IIPI~poly(index,k),data = d)))
   }
-  return(k_opt)
+  return(tibble(k_index = k_index,r2adjust = r2adjust,aic_list = aic_list))
 }
 
-k <- kfind(df.ts.modelset.deterministic.train)
+k_list <- kfind(df.ts.modelset.deterministic.train) %>% unnest()
 
-dlm.ts2 <- lm(IIPI~poly(index,k), data = df.ts.modelset.deterministic.train)
+dlm.ts2 <- lm(IIPI~poly(index,14), data = df.ts.modelset.deterministic.train)
 summary(dlm.ts2)
 ```
 
@@ -566,8 +563,8 @@ which(dlm.ts3.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
 
 ```{r}
 termsforassessment <- which(dlm.ts3.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names() %>% tibble()
-sins <- termsforassessment %>% filter(str_detect(.,'sin'))
-coss <- termsforassessment %>% filter(str_detect(.,'cos'))
+sins <- termsforassessment %>% dplyr::filter(str_detect(.,'sin'))
+coss <- termsforassessment %>% dplyr::filter(str_detect(.,'cos'))
 
 remove <- intersect(sins$`.` %>% str_extract(.,"(\\d+)"), coss$`.` %>% str_extract(.,"(\\d+)"))
 
@@ -630,7 +627,7 @@ dlm.ts.r2tlb
 ```
 
 ```{r}
-dlm.ts.r2tlb %>% mutate(lead = lead(r2adj)<r2adj) %>% filter(lead)
+dlm.ts.r2tlb %>% mutate(lead1 = dplyr::lead(r2adj)<r2adj)
 ```
 However, the adjusted R-squared does not decrease until using 85 harmonics.
 
@@ -832,7 +829,8 @@ arima_table2 %>% arrange(arima_aic) %>% head(3)
 dlm.ts6.arima201 <- arima(df.ts.modelset.harmonic.train1$IIPI, order =c(2,0,1), xreg = df.ts.modelset.harmonic.train1 %>% select(-c('IIPI')))
 dlm.ts6.arima201
 
-pred.dlm.ts6.arima201nahead <- predict(dlm.ts6.arima201,n.ahead = 10, new = data.frame(df.ts.modelset.harmonic.test1 %>%select(-c('IIPI'))))$pred
+pred.dlm.ts6.arima201nahead <- df.ts.modelset.train$IIPI - (dlm.ts6.arima201$residuals %>% unlist())
+pred.dlm.ts6.arima201nahead <- pred.dlm.ts6.arima201nahead %>% append(predict(dlm.ts6.arima201,n.ahead = 10, new = data.frame(df.ts.modelset.harmonic.test1 %>%select(-c('IIPI'))))$pred)
 ```
 
 ```{r}
@@ -847,7 +845,8 @@ for (i in 1:(dim(df.ts.modelset.harmonic.test1)[1])){
   x <- x %>% rbind(df.ts.modelset.harmonic.test1[i,] %>% select(-c('IIPI')))
 }
 
-pred.dlm.ts6.arima2011step <- predictions_armatemp %>% unlist()
+pred.dlm.ts6.arima2011step <- df.ts.modelset.train$IIPI - (mlm.ts2.arima300$residuals %>% unlist())
+pred.dlm.ts6.arima2011step <- pred.dlm.ts6.arima2011step %>% append(predictions_armatemp %>% unlist())
 pred.dlm.ts6.arima2011step
 ```
 
@@ -860,7 +859,8 @@ arima_table3  %>% arrange(arima_aic) %>% head(3)
 mlm.ts2.arima300 <- arima(df.ts.modelset.train$IIPI, order =c(3,0,0), xreg = df.ts.modelset.train %>% select(-c('Date_form','IIPI','GDP','IndPro')))
 mlm.ts2.arima300
 
-pred.mlm.ts2.arima300nahead <- predict(mlm.ts2.arima300,n.ahead = 10, new = data.frame(df.ts.modelset.test %>%select(-c('Date_form','IIPI','GDP','IndPro'))))$pred
+pred.mlm.ts2.arima300nahead <- df.ts.modelset.train$IIPI - (mlm.ts2.arima300$residuals %>% unlist())
+pred.mlm.ts2.arima300nahead <- pred.mlm.ts2.arima300nahead%>% append(predict(mlm.ts2.arima300,n.ahead = 10, new = data.frame(df.ts.modelset.test %>%select(-c('Date_form','IIPI','GDP','IndPro'))))$pred)
 ```
 
 
@@ -876,30 +876,38 @@ for (i in 1:(dim(df.ts.modelset.test)[1])){
   x <- x %>% rbind(df.ts.modelset.test[i,] %>% select(-c('Date_form','IIPI','GDP','IndPro')))
 }
 
-pred.mlm.ts2.arima3001step <- predictions_armatemp %>% unlist()
+pred.mlm.ts2.arima3001step <- df.ts.modelset.train$IIPI - (mlm.ts2.arima300$residuals %>% unlist())
+pred.mlm.ts2.arima3001step <- pred.mlm.ts2.arima3001step %>% append(predictions_armatemp %>% unlist())
 pred.mlm.ts2.arima3001step
 ```
 
 ```{r}
-q=1
-p=0
-
-garch_search <- function(d){
-  p_index <- list()
-  q_index <- list()
-  arima_aic <- list()
-  for (q in 1:2){
-    for (p in 0:2){
-      ztemp<-garchFit(~arma(1,1)+garch(q,p),data=d, trace=FALSE) %>% summary()
-      p_index <- p_index %>% append(p)
-      q_index <- q_index %>% append(p)
-      arima_aic <- arima_aic %>% append(ztemp@fit$ics['AIC']*length(d))
-    }
+p_index <- list()
+q_index <- list()
+d <- diff(df.ts.modelset.train$IIPI)
+garch_list <- 
+  foreach(i=1:2) %:%
+  foreach(j=0:2) %do% {
+    garch_list<-garchFit(substitute(~arma(1,1)+garch(p,q),list(p=i,q=j)),data=d, trace=FALSE) 
   }
-  return(tibble(q_index,p_index,arima_aic))
-}
 
-garch_table1 <- garch_search(d = diff(df.ts.modelset.train$IIPI))
+garch_list
+```
+
+```{r}
+arima111.garch20 <- garchFit(~arma(1,1)+garch(2,0),data=diff(df.ts.modelset.train$IIPI), trace=FALSE)
+arima111.garch20@fit$ics['AIC']*length(diff(df.ts.modelset.train$IIPI))
+pred.arima111.garch20 <- predict(arima111.garch20, plot=TRUE)
+
+arima111.garch11 <- garchFit(~arma(1,1)+garch(1,1),data=diff(df.ts.modelset.train$IIPI), trace=FALSE)
+arima111.garch11@fit$ics['AIC']*length(diff(df.ts.modelset.train$IIPI))
+pred.arima111.garch11 <- predict(arima111.garch11, plot = TRUE)
+```
+
+
+```{r}
+acf(arima111.garch20@residuals/arima111.garch20@sigma.t, main="Residuals")
+Box.test(arima111.garch20@residuals/arima111.garch20@sigma.t, lag=20)
 ```
 
 ```{r}
