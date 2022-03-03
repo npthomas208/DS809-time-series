@@ -984,7 +984,7 @@ lines(pred.arima111.garch11_1step[422:433],col="red")
 abline(v=424,col="blue", lty=5)
 ```
 
-##
+## Prediction Comparison
 
 ```{r echo=FALSE, warings=FALSE}
 
@@ -1057,11 +1057,143 @@ comparetable <- tibble(
 comparetable %>% arrange(MAPE)
 ```
 
+## Vector Autoregressive Moving Average
+
+First, stationarity is induced in all variables by taking the first difference.  All pair-wise CCFs are checked for bivariate white noise.  If one variable is found to be bivariate white noise with all others, it should be removed from the subsequent VARMA model:
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$TBillClose) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$GDP) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$InfRate) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$M2) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$GDP) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$InfRate) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$M2) # IS WHITE NOISE
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$InfRate) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$M2) # not white noise
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$M2) # IS WHITE NOISE
+ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$M2) # not white noise
+ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+ccf(df.ts.modelset.train.vector.diff$M2,df.ts.modelset.train.vector.diff$UnempRate) # IS WHITE NOISE
+```
+
+M2 is a candidate for removal from the VARMA as it is only not bivariate white noise with GDP.
+
+In consideration of computation time only VAR(1) model is estimated, with a matric of 49 $phi$ estimates:
+
+```{r}
+varma1_0$coef
+```
+
+However, only those with a ratio of estimate to standard error > ~1.96 are significant:
+
+```{r}
+abs(varma1_0$coef/varma1_0$secoef)
+```
+
+The vector of residuals are not white noise:
+
+```{r}
+acf(varma1_0$residuals[,1])
+acf(varma1_0$residuals[,2])
+acf(varma1_0$residuals[,3])
+acf(varma1_0$residuals[,4])
+acf(varma1_0$residuals[,5])
+acf(varma1_0$residuals[,6])
+acf(varma1_0$residuals[,7])
+```
+
+```{r}
+plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
+title("VAR(1)")
+lines(pred.varma1_0.nahead,col="red")
+abline(v=424,col="blue", lty=5)
+```
 
 
+## Transfer Function
 
+First prewhitening is performed on all variables:
 
+```{r}
+acf(diff(df.ts.modelset.train.vector$TBillClose))
+pacf(diff(df.ts.modelset.train.vector$TBillClose))
+arimaTBillClose <- arima(df.ts.modelset.train.vector$TBillClose,order = c(27,1,0))
+Box.test(arimaTBillClose$residuals)
+```
 
+```{r}
+acf(diff(df.ts.modelset.train.vector$GDP, lag = 3))
+pacf(diff(df.ts.modelset.train.vector$GDP))
+arimaGDP <- arima(df.ts.modelset.train.vector$TBillClose,order = c(6,1,0))
+Box.test(arimaGDP$residuals)
+```
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$InfRate))
+pacf(diff(df.ts.modelset.train.vector$InfRate))
+arimaInfRate <- arima(df.ts.modelset.train.vector$InfRate,order = c(2,1,0), seasonal=list(order=c(1,1,1), period=12))
+Box.test(arimaInfRate$residuals)
+```
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$IndPro))
+pacf(diff(df.ts.modelset.train.vector$IndPro))
+arimaIndPro <- arima(df.ts.modelset.train.vector$IndPro,order = c(2,1,2))
+Box.test(arimaIndPro$residuals)
+```
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$M2))
+pacf(diff(df.ts.modelset.train.vector$M2))
+arimaM2 <- arima(df.ts.modelset.train.vector$M2,order = c(1,1,1), seasonal=list(order=c(1,1,1), period=12))
+Box.test(arimaM2$residuals)
+```
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$UnempRate))
+pacf(diff(df.ts.modelset.train.vector$UnempRate))
+arimaUnempRate <- arima(df.ts.modelset.train.vector$UnempRate,order = c(2,1,2))
+Box.test(arimaUnempRate$residuals)
+```
+
+Next checking CCFs to see if there are applicable b, r, s values:
+
+```{r}
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$TBillClose)
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$GDP)
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$InfRate)
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$IndPro)
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$M2)
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$UnempRate)
+```
+
+All are white noise - there is not a reasonable transfer function.
+
+```{r}
+multivariable_comparetable <- comparetable %>% rbind(
+  data.frame(
+    Model = c(
+    'VARMA prediction of IIPI'),
+    MAPE = c(
+      mape(d = df.ts.modelset.test$IIPI, 
+           p = pred.varma1_0.nahead)
+    )
+  )
+)
+```
+
+# Conclusion
+
+The choise of independent variable was unfortunately lacking...
 
 
 

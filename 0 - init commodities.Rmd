@@ -956,10 +956,244 @@ abline(v=424,col="blue", lty=5)
 # VARMA
 
 ```{r}
-df.ts.modelset.train <- df.ts.modelset.train %>% select(-Recession)
+df.ts.modelset.train.vector <- df.ts.modelset.train %>% select(-Recession,-Date_form)
+df.ts.modelset.train.vector.diff <- apply(df.ts.modelset.train.vector,diff,MARGIN = 2, simplify = FALSE) %>% data.frame()
+df.ts.modelset.train.vector.diff
 ```
 
+Checking for bivariate white noise, pairwise:
 
+```{r}
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$TBillClose) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$GDP) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$InfRate) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$M2) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$GDP) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$InfRate) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$M2) # IS WHITE NOISE
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$InfRate) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$M2) # not white noise
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$M2) # IS WHITE NOISE
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$M2) # not white noise
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.diff$M2,df.ts.modelset.train.vector.diff$UnempRate) # IS WHITE NOISE
+```
+
+```{r}
+VARorder(df.ts.modelset.train.vector.diff)
+VMAorder(df.ts.modelset.train.vector.diff)
+```
+
+```{r}
+varma1_1 <- VARMA(df.ts.modelset.train.vector.diff,p=1,q=1,include.mean=FALSE)
+```
+
+```{r}
+ccf(varma1_1$residuals[,1],varma1_1$residuals[,2])
+ccf(varma1_1$residuals[,1],varma1_1$residuals[,3])
+ccf(varma1_1$residuals[,1],varma1_1$residuals[,4])
+ccf(varma1_1$residuals[,1],varma1_1$residuals[,5])
+ccf(varma1_1$residuals[,1],varma1_1$residuals[,6])
+ccf(varma1_1$residuals[,1],varma1_1$residuals[,7])
+ccf(varma1_1$residuals[,2],varma1_1$residuals[,3])
+ccf(varma1_1$residuals[,2],varma1_1$residuals[,4])
+ccf(varma1_1$residuals[,2],varma1_1$residuals[,5])
+ccf(varma1_1$residuals[,2],varma1_1$residuals[,6])
+ccf(varma1_1$residuals[,2],varma1_1$residuals[,7])
+ccf(varma1_1$residuals[,3],varma1_1$residuals[,4])
+ccf(varma1_1$residuals[,3],varma1_1$residuals[,5])
+ccf(varma1_1$residuals[,3],varma1_1$residuals[,6])
+ccf(varma1_1$residuals[,3],varma1_1$residuals[,7])
+ccf(varma1_1$residuals[,4],varma1_1$residuals[,5])
+ccf(varma1_1$residuals[,4],varma1_1$residuals[,6])
+ccf(varma1_1$residuals[,4],varma1_1$residuals[,7])
+ccf(varma1_1$residuals[,5],varma1_1$residuals[,6])
+ccf(varma1_1$residuals[,5],varma1_1$residuals[,7])
+ccf(varma1_1$residuals[,6],varma1_1$residuals[,7])
+```
+
+```{r}
+varma1_0 <- VARMA(df.ts.modelset.train.vector.diff,p=1,q=0,include.mean=FALSE)
+
+varma1_0$coef
+```
+
+```{r}
+ccf(varma1_0$residuals[,1],varma1_0$residuals[,2])
+ccf(varma1_0$residuals[,1],varma1_0$residuals[,3])
+ccf(varma1_0$residuals[,1],varma1_0$residuals[,4])
+ccf(varma1_0$residuals[,1],varma1_0$residuals[,5])
+ccf(varma1_0$residuals[,1],varma1_0$residuals[,6])
+ccf(varma1_0$residuals[,1],varma1_0$residuals[,7])
+ccf(varma1_0$residuals[,2],varma1_0$residuals[,3])
+ccf(varma1_0$residuals[,2],varma1_0$residuals[,4])
+ccf(varma1_0$residuals[,2],varma1_0$residuals[,5])
+ccf(varma1_0$residuals[,2],varma1_0$residuals[,6])
+ccf(varma1_0$residuals[,2],varma1_0$residuals[,7])
+ccf(varma1_0$residuals[,3],varma1_0$residuals[,4])
+ccf(varma1_0$residuals[,3],varma1_0$residuals[,5])
+ccf(varma1_0$residuals[,3],varma1_0$residuals[,6])
+ccf(varma1_0$residuals[,3],varma1_0$residuals[,7])
+ccf(varma1_0$residuals[,4],varma1_0$residuals[,5])
+ccf(varma1_0$residuals[,4],varma1_0$residuals[,6])
+ccf(varma1_0$residuals[,4],varma1_0$residuals[,7])
+ccf(varma1_0$residuals[,5],varma1_0$residuals[,6])
+ccf(varma1_0$residuals[,5],varma1_0$residuals[,7])
+ccf(varma1_0$residuals[,6],varma1_0$residuals[,7])
+```
+
+```{r}
+forecast<-VARMApred(varma1_0,h=10)
+```
+
+```{r}
+pred.varma1_0.nahead <- rep(df.ts.modelset.train.vector$IIPI[length(df.ts.modelset.train.vector$IIPI)],10) - forecast$pred[,1]
+```
+
+PREWHITENING:
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$TBillClose))
+pacf(diff(df.ts.modelset.train.vector$TBillClose))
+arimaTBillClose <- arima(df.ts.modelset.train.vector$TBillClose,order = c(27,1,0))
+Box.test(arimaTBillClose$residuals)
+```
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$GDP, lag = 3))
+pacf(diff(df.ts.modelset.train.vector$GDP))
+arimaGDP <- arima(df.ts.modelset.train.vector$TBillClose,order = c(6,1,0))
+Box.test(arimaGDP$residuals)
+```
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$InfRate))
+pacf(diff(df.ts.modelset.train.vector$InfRate))
+arimaInfRate <- arima(df.ts.modelset.train.vector$InfRate,order = c(2,1,0), seasonal=list(order=c(1,1,1), period=12))
+Box.test(arimaInfRate$residuals)
+```
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$IndPro))
+pacf(diff(df.ts.modelset.train.vector$IndPro))
+arimaIndPro <- arima(df.ts.modelset.train.vector$IndPro,order = c(2,1,2))
+Box.test(arimaIndPro$residuals)
+```
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$M2))
+pacf(diff(df.ts.modelset.train.vector$M2))
+arimaM2 <- arima(df.ts.modelset.train.vector$M2,order = c(1,1,1), seasonal=list(order=c(1,1,1), period=12))
+Box.test(arimaM2$residuals)
+```
+
+```{r}
+acf(diff(df.ts.modelset.train.vector$UnempRate))
+pacf(diff(df.ts.modelset.train.vector$UnempRate))
+arimaUnempRate <- arima(df.ts.modelset.train.vector$UnempRate,order = c(2,1,2))
+Box.test(arimaUnempRate$residuals)
+```
+
+```{r}
+df.ts.modelset.train.vector.prewhite <- df.ts.modelset.train.vector %>%
+  mutate(
+    TBillClose = arimaTBillClose$residuals,
+    GDP = arimaGDP$residuals,
+    InfRate = arimaInfRate$residuals,
+    IndPro = arimaIndPro$residuals,
+    M2 = arimaM2$residuals,
+    UnempRate = arimaUnempRate$residuals
+  )
+```
+
+```{r}
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$TBillClose)
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$GDP)
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$InfRate)
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$IndPro) # b = 3, r = 2, s = 7
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$M2)
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$UnempRate)
+```
+
+## PREDICTING MONEY SUPPLY:
+
+```{r}
+Box.test(arima111$residuals)
+```
+
+```{r}
+df.ts.modelset.train.TF.M2 <- df.ts.modelset.train.vector %>% mutate(
+  IIPI = arima111$residuals
+)
+```
 
 ```{r}
 save.image()
