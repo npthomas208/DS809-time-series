@@ -334,7 +334,7 @@ predupper = predint[,3]
 conflower = confint[,2]
 confupper = confint[,3]
 
-plot(df.ts.modelset.deterministic$IIPI, col="lightgray", ylab="IIPI",xlab="Time")
+plot(df.ts.modelset.deterministic$IIPI, col="lightgray", ylab="IIPI",xlab="Time", ylim = c(20,200))
 lines(predint[,1],col="red")
 abline(v=424,col="blue", lty=5)
 lines(predlower,col="orange")
@@ -759,7 +759,7 @@ However when looking at on-step head values, the prediciton clearly performs muc
 ```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[424:433], col="black", xlab = "Time", ylab = "IIPI")
 title("Regression with ARIMA(3,0,0) sequential")
-lines(pred.arima1111step,col="red")
+lines(pred.mlm.ts2.arima3001step,col="red")
 abline(v=424,col="blue", lty=5)
 
 ```
@@ -836,7 +836,6 @@ plot(df.ts.modelset$IIPI[424:433], col="black", xlab = "Time", ylab = "IIPI")
 title("Regression with ARIMA(3,0,0) sequential")
 lines(pred.dlm.ts6.arima2011step[424:433],col="red")
 abline(v=424,col="blue", lty=5)
-
 ```
 
 *Regression with ARIMA(3,0,0) sequential - prediction region*
@@ -866,6 +865,42 @@ The residuals are not white noise.
 
 ## Generalized Autoregressive conditionally Heteroscedastic Model (GARCH)
 
+Investigating using the GARCH model for IIPI.  First, as shown before the series and its first difference are not white noise. Therefore, a GARCH model on the original series is not applicable.
+
+## Regression Model GARCH on residuals investigation
+
+The residuals of the regression model are autocorrelated, therefore GARCH is not applicable:
+
+```{r}
+acf(mlm.ts2$residuals)
+```
+
+## Seasonal Model GARCH on residuals investigation
+
+The residuals of the regression model autocorrelated, therefore GARCH is not applicable:
+
+```{r}
+acf(dlm.ts1$residuals)
+```
+
+## Polynomial Model GARCH on residuals investigation
+
+The residuals of the regression model autocorrelated, therefore GARCH is not applicable:
+
+```{r}
+acf(dlm.ts2$residuals)
+```
+
+## Harmonic Model with 15 harmonics, GARCH on residuals investigation
+
+The residuals of the regression model autocorrelated, therefore GARCH is not applicable:
+
+```{r}
+acf(dlm.ts6$residuals)
+```
+
+## ARIMA Model Generalized Autoregressive conditionally Heteroscedastic Model (GARCH)
+
 Using the ARIMA(1,1,1) residuals first to check for GARCH model potential:
 
 ```{r echo=FALSE}
@@ -886,6 +921,8 @@ Two potential GARCH models are investigated: GARCH(2,0) and GARCH(1,1)
 
 ### Model Summary
 
+ARIMA(1,1,1) with GARCH(2,0)
+
 ```{r echo=FALSE}
 arima111.garch20
 ```
@@ -899,44 +936,55 @@ Box.test(arima111.garch20@residuals/arima111.garch20@sigma.t, lag=20)
 
 The residuals of the model are not white noise.
 
+ARIMA(1,1,1) with  GARCH(1,1):
+
 ```{r echo=FALSE}
 arima111.garch11
 ```
 
-All model parameters are significant.
+All model parameters are significant, the mean was removed based on AIC evaluation.
 
 ```{r echo=FALSE}
 acf(arima111.garch11@residuals/arima111.garch11@sigma.t, main="Residuals")
 Box.test(arima111.garch11@residuals/arima111.garch11@sigma.t, lag=20)
 ```
 
-This residuals of this model are white noise.
+This residuals of this model are white noise!
 
-The following is the predicted conditional variance of the model:
+The following is the predicted conditional variance of the first differenced IIPI:
 
 ```{r echo=FALSE}
 predict(arima111.garch11, plot = TRUE)
 ```
 
-## ... Model
+As expected the mean value tends toward an asymptotic value:
 
-### Model Fit Plot
+```{r}
+plot(df.ts.modelset$IIPI, col="black", xlab = "Time", ylab = "IIPI")
+title("ARIMA(1,1,1) with GARCH(1,1) n ahead")
+lines(pred.arima111.garch11nahead,col="red")
+abline(v=424,col="blue", lty=5)
+```
 
-### Residual Assumptions
+Zoomed in on the prediction area for better visibility:
 
-#### Residual Autocorrelation
+```{r}
+plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
+title("ARIMA(1,1,1) with GARCH(1,1) n ahead")
+lines(pred.arima111.garch11nahead[422:433],col="red")
+abline(v=424,col="blue", lty=5)
+```
 
-#### Residual Normality
+However, when taking the predictions 1 step ahead, the model predicts unprecedentedly well (!):
 
-#### Constant Variance
+```{r}
+plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
+title("ARIMA(1,1,1) with GARCH(1,1) sequential (!)")
+lines(pred.arima111.garch11_1step[422:433],col="red")
+abline(v=424,col="blue", lty=5)
+```
 
-### Model Summary
-
-# XXXXXX Model [SECTION]
-
-# Model Comparision - Predictive Comparison
-
-### In-sample and Predictive Comparisons
+##
 
 ```{r echo=FALSE, warings=FALSE}
 
@@ -948,7 +996,7 @@ comparetable <- tibble(
   Model = c(
     'Linear Model, variable reduced',
     'Deterministic Model, Monthly Indicator with Trend',
-    'Deterministic Model, Polynomial k=5',
+    'Deterministic Model, Polynomial k=14',
     'Deterministic Model, 100 Harmonics',
     'Deterministic Model, 85 Harmonics',
     'Deterministic Model, 15 Harmonics',
@@ -962,7 +1010,9 @@ comparetable <- tibble(
     'Linear Model, v.r., residual ARIMA, n ahead',
     'Linear Model, v.r., residual ARIMA, seq. 1 ahead',
     'Harmonic Model, residual ARIMA, n ahead',
-    'Harmonic Model, residual ARIMA, seq. 1 ahead'),
+    'Harmonic Model, residual ARIMA, seq. 1 ahead',
+    'ARIMA(1,1,1) with GARCH(1,1), n ahead',
+    'AIMAA(1,1,1) with GARCH(1,1) seq. 1 ahead'),
     MAPE = c(
     mape(d = df.ts.modelset.test$IIPI, 
          p = predict(mlm.ts2, df.ts.modelset.test %>% select(-c(IIPI,Date_form,GDP,IndPro)))),
@@ -997,10 +1047,13 @@ comparetable <- tibble(
     mape(d = df.ts.modelset.test$IIPI,
          p = pred.dlm.ts6.arima201nahead[424:433]),
     mape(d = df.ts.modelset.test$IIPI,
-         p = pred.dlm.ts6.arima2011step[424:433])
+         p = pred.dlm.ts6.arima2011step[424:433]),
+    mape(d = df.ts.modelset.test$IIPI,
+         p = pred.arima111.garch11nahead[423:432]),
+    mape(d = df.ts.modelset.test$IIPI,
+         p = pred.arima111.garch11_1step[423:432]) 
     )
 )
-comparetable
 comparetable %>% arrange(MAPE)
 ```
 

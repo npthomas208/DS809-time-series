@@ -22,6 +22,7 @@ library(ggplot2)
 library(reshape2)
 library(fGarch)
 library(doParallel)
+library(MTS)
 ```
 
 # Initalialization 
@@ -834,6 +835,15 @@ pred.dlm.ts6.arima201nahead <- pred.dlm.ts6.arima201nahead %>% append(predict(dl
 ```
 
 ```{r}
+mlm.ts2.arima300 <- arima(df.ts.modelset.train$IIPI, order =c(3,0,0), xreg = df.ts.modelset.train %>% select(-c('Date_form','IIPI','GDP','IndPro')))
+mlm.ts2.arima300
+
+pred.mlm.ts2.arima300nahead <- df.ts.modelset.train$IIPI - (mlm.ts2.arima300$residuals %>% unlist())
+pred.mlm.ts2.arima300nahead <- pred.mlm.ts2.arima300nahead%>% append(predict(mlm.ts2.arima300,n.ahead = 10, new = data.frame(df.ts.modelset.test %>%select(-c('Date_form','IIPI','GDP','IndPro'))))$pred)
+```
+
+
+```{r}
 predictions_armatemp <- list()
 
 y = df.ts.modelset.harmonic.train1$IIPI
@@ -856,13 +866,8 @@ arima_table3  %>% arrange(arima_aic) %>% head(3)
 ```
 
 ```{r}
-mlm.ts2.arima300 <- arima(df.ts.modelset.train$IIPI, order =c(3,0,0), xreg = df.ts.modelset.train %>% select(-c('Date_form','IIPI','GDP','IndPro')))
-mlm.ts2.arima300
-
-pred.mlm.ts2.arima300nahead <- df.ts.modelset.train$IIPI - (mlm.ts2.arima300$residuals %>% unlist())
-pred.mlm.ts2.arima300nahead <- pred.mlm.ts2.arima300nahead%>% append(predict(mlm.ts2.arima300,n.ahead = 10, new = data.frame(df.ts.modelset.test %>%select(-c('Date_form','IIPI','GDP','IndPro'))))$pred)
+acf(mlm.ts2$residuals)
 ```
-
 
 ```{r}
 predictions_armatemp <- list()
@@ -899,16 +904,62 @@ arima111.garch20 <- garchFit(~arma(1,1)+garch(2,0),data=diff(df.ts.modelset.trai
 arima111.garch20@fit$ics['AIC']*length(diff(df.ts.modelset.train$IIPI))
 pred.arima111.garch20 <- predict(arima111.garch20, plot=TRUE)
 
-arima111.garch11 <- garchFit(~arma(1,1)+garch(1,1),data=diff(df.ts.modelset.train$IIPI), trace=FALSE)
+arima111.garch11 <- garchFit(~arma(1,1)+garch(1,1),data=diff(df.ts.modelset.train$IIPI), trace=FALSE, include.mean = FALSE)
 arima111.garch11@fit$ics['AIC']*length(diff(df.ts.modelset.train$IIPI))
-pred.arima111.garch11 <- predict(arima111.garch11, plot = TRUE)
-```
+pred.arima111.garch11 <- predict(arima111.garch11, n.ahead = 10, plot = TRUE)
 
+pred.arima111.garch11nahead <- df.ts.modelset.train$IIPI[2:423] - (arima111.garch11@residuals %>% unlist())
+pred.arima111.garch11nahead <- pred.arima111.garch11nahead %>% append(rep(df.ts.modelset.train$IIPI[423],10) - pred.arima111.garch11$meanForecast)
+```
 
 ```{r}
-acf(arima111.garch20@residuals/arima111.garch20@sigma.t, main="Residuals")
-Box.test(arima111.garch20@residuals/arima111.garch20@sigma.t, lag=20)
+df.ts.modelset.train$IIPI[2:423]%>% length()
+arima111.garch11@residuals %>% length()
 ```
+
+```{r}
+plot(df.ts.modelset$IIPI, col="black", xlab = "Time", ylab = "IIPI")
+title("ARIMA(1,1,1) with GARCH(1,1)")
+lines(pred.arima111.garch11nahead,col="red")
+abline(v=424,col="blue", lty=5)
+
+plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
+title("ARIMA(1,1,1) with GARCH(1,1) 1...")
+lines(pred.arima111.garch11nahead[422:433],col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+```{r}
+predictions_arimagarchtemp <- list()
+
+y = df.ts.modelset.train$IIPI
+for (i in 1:(dim(df.ts.modelset.test)[1])){
+  arimagarchtemp <- garchFit(~arma(1,1)+garch(1,1),data=diff(y), trace=FALSE)
+  predictions_arimagarchtemp[[i]] <- predict(arimagarchtemp, n.ahead = 1)$meanForecast
+  y <- y %>% append(df.ts.modelset.test[i,'IIPI']) %>% unlist()
+}
+predictions_arimagarchtemp <- predictions_arimagarchtemp %>% unlist()
+
+pred.arima111.garch11_1step <- c()
+pred.arima111.garch11_1step<- df.ts.modelset.train$IIPI[2:423] - (arima111.garch11@residuals)
+pred.arima111.garch11_1step <- pred.arima111.garch11_1step %>% append(df.ts.modelset.test$IIPI - predictions_arimagarchtemp)
+pred.arima111.garch11_1step
+```
+
+```{r}
+plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
+title("ARIMA(1,1,1) with GARCH(1,1) 1...")
+lines(pred.arima111.garch11_1step[422:433],col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+# VARMA
+
+```{r}
+df.ts.modelset.train <- df.ts.modelset.train %>% select(-Recession)
+```
+
+
 
 ```{r}
 save.image()
