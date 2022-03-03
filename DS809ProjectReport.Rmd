@@ -1178,6 +1178,33 @@ ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewh
 
 All are white noise - there is not a reasonable transfer function.
 
+However, as example of the transfer function implementation.  It can be seen that IIPI can be used to predict M2.
+
+First the variable are prepared, and a transfer function is estimated based on, b=0, r=2, s=10:
+
+```{r}
+X <- arima111$residuals[2:423]- mean(arima111$residuals)
+Y <- diff(df.ts.modelset.train$M2) - mean(diff(df.ts.modelset.train$M2))
+
+acf(arima111$residuals[2:423])
+acf(diff(df.ts.modelset.train$M2))
+
+m<-arimax(Y, order=c(1,0,0), fixed=c(0,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA), xtransf=data.frame(X), transfer=list(c(2,10)), include.mean = FALSE)
+m
+acf(m$residuals, na.action = na.pass)
+Box.test(m$residuals)
+```
+
+The model coefficients are mostly significant, based on the ratio of estimates to s.e., but the residuals of the model are not white noise and seen in the above Box-Pierce and ACF. This is corrected using ARIMA:
+
+```{r}
+m_arima_resid
+```
+
+```{r}
+Box.test(m_arima_resid$residuals)
+```
+
 ```{r}
 multivariable_comparetable <- comparetable %>% rbind(
   data.frame(

@@ -1189,10 +1189,35 @@ ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewh
 Box.test(arima111$residuals)
 ```
 
+
 ```{r}
-df.ts.modelset.train.TF.M2 <- df.ts.modelset.train.vector %>% mutate(
-  IIPI = arima111$residuals
-)
+X <- arima111$residuals[2:423]- mean(arima111$residuals)
+Y <- diff(df.ts.modelset.train$M2) - mean(diff(df.ts.modelset.train$M2))
+
+acf(arima111$residuals[2:423])
+acf(diff(df.ts.modelset.train$M2))
+
+m<-arimax(Y, order=c(1,0,0), fixed=c(0,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA), xtransf=data.frame(X), transfer=list(c(2,10)), include.mean = FALSE)
+m
+acf(m$residuals, na.action = na.pass)
+Box.test(m$residuals)
+```
+
+```{r}
+m_arima_resid<-arimax(Y, order = c(1,0,0), seasonal=list(order=c(1,0,0), period=12), xtransf=data.frame(X), transfer=list(c(2,10)), include.mean = FALSE)
+m_arima_resid
+Box.test(m_arima_resid$residuals)
+```
+
+```{r}
+pred.tf <- (Y-m_arima_resid$residuals + mean(diff(df.ts.modelset.train$M2))) + df.ts.modelset.train$M2[2:423]
+```
+
+```{r}
+plot(df.ts.modelset$M2[2:423], col="black", xlab = "Time", ylab = "M2")
+title("TF for M2, with ARIMA correction on residuals")
+lines(pred.tf,col="red")
+abline(v=424,col="blue", lty=5)
 ```
 
 ```{r}
