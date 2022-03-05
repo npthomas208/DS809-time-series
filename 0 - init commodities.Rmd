@@ -949,7 +949,7 @@ predictions_arimagarchtemp <- predictions_arimagarchtemp %>% unlist()
 
 pred.arima111.garch11_1step <- c()
 pred.arima111.garch11_1step<- df.ts.modelset.train$IIPI[2:423] - (arima111.garch11@residuals)
-pred.arima111.garch11_1step <- pred.arima111.garch11_1step %>% append(df.ts.modelset.test$IIPI - predictions_arimagarchtemp)
+pred.arima111.garch11_1step <- pred.arima111.garch11_1step %>% append(df.ts.modelset$IIPI[423:432] - predictions_arimagarchtemp)
 pred.arima111.garch11_1step
 ```
 
@@ -1015,7 +1015,7 @@ predictions_arimagarchtemp <- predictions_arimagarchtemp %>% unlist()
 
 pred.arima210.garch11_1step <- c()
 pred.arima210.garch11_1step<- df.ts.modelset.train$IIPI[2:423] - (arima210.garch11@residuals)
-pred.arima210.garch11_1step <- pred.arima210.garch11_1step %>% append(df.ts.modelset.test$IIPI - predictions_arimagarchtemp)
+pred.arima210.garch11_1step <- pred.arima210.garch11_1step %>% append(df.ts.modelset$IIPI[423:432] - predictions_arimagarchtemp)
 pred.arima210.garch11_1step
 ```
 
@@ -1346,8 +1346,17 @@ predictions_regressionarimagarchtemp <- predictions_regressionarimagarchtemp %>%
 
 pred.reg.arima300.garch11_1step <- c()
 pred.reg.arima300.garch11_1step<- pred.fit[1:423]
-pred.reg.arima300.garch11_1step <- pred.reg.arima300.garch11_1step %>% append(df.ts.modelset.test$IIPI - predictions_regressionarimagarchtemp)
+pred.reg.arima300.garch11_1step <- pred.reg.arima300.garch11_1step %>% append(df.ts.modelset$IIPI[423:432] - predictions_regressionarimagarchtemp)
 pred.reg.arima300.garch11_1step
+```
+
+```{r echo = FALSE}
+
+
+plot(df.ts.modelset$IIPI[424:434], col="black", xlab = "Time", ylab = "IIPI")
+title("Regression with ARIMA(3,0,0) then GARCH(1,1)")
+lines(pred.reg.arima300.garch11_1step[424:434],col="red")
+abline(v=424,col="blue", lty=5)
 ```
 
 ```{r}
