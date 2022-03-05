@@ -1,5 +1,5 @@
 ---
-title: "DS809 - Industrial Inputs Price Index"
+title: "DS809 - Industrial Inputs Price Index Modelling"
 author: "Nate Thomas"
 date: "`r Sys.Date()`"
 output: word_document
@@ -20,7 +20,7 @@ library(rugarch)
 
 # Introduction and Overview
 
-This project endeavors to provide example implementation of the various methods outlined in DS809 Time Series to model the commodity index Industrial Inputs Price Index from 1980 through 2016. The Industrial Input Price Index, hereafter IIPI, is provided by the International Monetary Fund (IMF) in the IMF Primary Commodity Prices Report (*IMF Primary Commodity Prices*, 2021). As a break-out index it does not include energy commodities (Coal, Natural Gas, Spot Crude, Propane) but does include agricultural raw materials (Cotton, Hides, Rubber, Timber, Wool), metals (Aluminum, Cobalt, Copper, Iron Ore, Lead, Molybdenum, Nickel, Tin, Uranium, and Zinc), and precious metals (Gold, Palladium, Platinum, Silver). The index uses weighted average prices as representative of the global market, corrected for volume, as determined by the largest import markets for each commodity constituent. The purpose of the index is to provide a relative value indicator (here indexed to 2005 = 100) for assessment of the overall commodities market in question.
+This project endeavors to provide example implementation of the various methods outlined in DS809 Time Series.  The commodity index Industrial Inputs Price Index is modelled from 1980 through 2016. The Industrial Input Price Index, hereafter IIPI, is provided by the International Monetary Fund (IMF) in the IMF Primary Commodity Prices Report (*IMF Primary Commodity Prices*, 2021). As a break-out index, it does not include energy commodities (Coal, Natural Gas, Spot Crude, Propane) but does include agricultural raw materials (Cotton, Hides, Rubber, Timber, Wool), metals (Aluminum, Cobalt, Copper, Iron Ore, Lead, Molybdenum, Nickel, Tin, Uranium, and Zinc), and precious metals (Gold, Palladium, Platinum, Silver). The index uses weighted average prices as representative of the global market, corrected for volume, as determined by the largest import markets for each commodity constituent. The purpose of the index is to provide a relative value indicator (here indexed to 2005 = 100) for assessment of the overall commodities' market in question.
 
 The first task performed for this project was to create the time series dataset using *Predictive Dynamics in Commodity Prices* (Gargano & Timmerman, 2012) as a loose framework for select variables therein. These  were collected and organized for subsequent analysis.  The following is the list of variables collected and their sources:
 
@@ -46,7 +46,7 @@ G. US Unemployment, (*Employment and Unemployment*). tag: **UnempRate**
 
 H. Recession, (*Dates of U.S. Recessions as Inferred by GDP-based Recession Indicator*). tag : **Recession**
 
-The index is indicative of global market but this project uses United States specific independent variable values as analog facsimiles for global extrapolatoin. This is a recognized short-hand performed here to allow for timely and comprehensive analysis. United States' trade accounts for the largest percentage (13.5%) of total import trade worldwide (*US Trade - Statistics & Facts*, 2021), and therefore while this is not perfect it is used for the purposes of this project.
+IIPI is indicative of global market but this project uses United States specific independent variable values as analog facsimiles for global extrapolation. This is a recognized short-hand performed here to allow for timely and comprehensive analysis. United States' trade accounts for the largest percentage (13.5%) of total import trade worldwide (*US Trade - Statistics & Facts*, 2021), and therefore while this is not perfect US specific data is used for the purposes of this project.
 
 ## Visual Inspection of the Data
 
@@ -60,11 +60,11 @@ plot(decompose(df.ts))
 
 ## Project Goal
 
-The goal of any time series analysis is to achieve white noise residuals by modeling the dataset.  This implies that a model has capture all non-stochastic movement of the series with respect to the independent variables, or inherent features within the series.
+The goal of any time series analysis is to achieve white noise residuals.  This implies that a model has captured all non-stochastic movement of the series with respect to the independent variables, or inherent time relationship features within the series.
 
 ## Excluding White Noise Criteria
 
-The first task presented in this project is to exclude IIPI as a purely white noise process.  If it were white noise then modelling it would be trivial and complete upon determining that it is white noise.  A white noise process is defined by the following criteria:
+The first task presented in this project is to exclude IIPI as a purely white noise process.  If it were white noise then modelling it would be trivial and complete.  A white noise process is defined by the following criteria:
 
 1) Constant Mean: $E(IIPI_t) = \mu$ for all $t$
 
@@ -72,7 +72,7 @@ The first task presented in this project is to exclude IIPI as a purely white no
 
 3) Autocorrelation is not found at any lags: $\rho_k = 0$ for all $k\geq1$
 
-To show then that a series is not a WNP one must simply prove at least one of these constraints to be false.
+To show then that a series is not a white noise process one must simply prove at least one of these constraints to be false.
 
 ### IIPI White Noise Rejection
 
@@ -107,7 +107,7 @@ Box.test(df$IIPI_dif,lag=36)
 
 $H_0$: All autocorrelctions are zero (0), $H_a$: At least one (1) autocorrelation is not zero (0) 
 
-The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero in the first difference series.
+The test indicates one can safely reject the null hypothesis (H0) - such that at least one (1) autocorrleation is not zero in the first difference of the series.
 
 This is also seen through visual inspection of the ACF chart:
 
@@ -115,7 +115,7 @@ This is also seen through visual inspection of the ACF chart:
 acf(df$IIPI_dif, lag.max=36)
 ```
 
-The first difference of the data is stationary as can be seen in the fast decay in autocorrelation, however, it is not white noise due to a variety of significant autocorrelations.
+The first difference of IIPI is stationary as can be seen in the fast decay in autocorrelation. However, it is not white noise due to a variety of significant autocorrelations (those seen beyond the dotted blue line).
 
 # Regression Model
 
@@ -123,7 +123,7 @@ A multiple linear regression is estimated:
 
 $IIPI(`r names(mlm.ts$coefficients)[2:length(names(mlm.ts$coefficients))] %>% paste(sep = " ")`) = \hat{\beta}_0 + \hat{\beta}_1 TBillCLose + \hat{\beta}_2 GDP  + \hat{\beta}_3 InfRate + \hat{\beta}_4 IndPro + \hat{\beta}_5 M2 + \hat{\beta}_6 UnempRate + \hat{\beta}_7 Recession + \epsilon_t$
 
-Model reduction is perfomed iteratively, and the VIFs of each iterations is shown below. Ten (10) is the typically accepted subjective value at which a variance inflation factor is considered high:
+Model reduction is perfomed iteratively, and the VIFs of each iterations is shown below. Ten (10) is the typically accepted subjective value at which a variance inflation factor is considered high.  Only one independent variable is removed at each iteration.  First GDP then IndPro:
 
 ```{r echo = FALSE}
 vif(mlm.ts)
@@ -134,6 +134,8 @@ vif(mlm.ts)
 vif(mlm.ts1)
 ```
 
+The VIFs of the variable reduced model are shown below:
+
 ```{r echo = FALSE}
 vif(mlm.ts2)
 ```
@@ -143,6 +145,8 @@ Due to the multicollinearities this model is reduced to the following after insp
 $IIPI(`r names(mlm.ts2$coefficients)[2:length(names(mlm.ts2$coefficients))] %>% paste(sep = " ")`) = \hat{\beta}_0 + \hat{\beta}_1 TBillCLose + \hat{\beta}_3 InfRate + \hat{\beta}_5 M2 + \hat{\beta}_6 UnempRate + \hat{\beta}_7 Recession + \epsilon_t$
 
 ### Model Fit Plot
+
+The model is fit to the first 423 observations, then ten test predictions are estimated (after the blue dotted line):
 
 ```{r echo = FALSE}
 #Plotting the confidence and prediction intervals
@@ -211,7 +215,7 @@ acf(rstandard(mlm.ts2))
 
 #### Constant Variance
 
-White's test for Heteroscedasticity is performed to confirm constant variance:
+White's test for heteroscedasticity is performed to confirm constant variance:
 
 ```{r echo = FALSE}
 white_lm(mlm.ts2, interactions = TRUE)
@@ -223,7 +227,7 @@ The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one mu
 
 ### Regression Residual Summary
 
-All the residual assumptions failed for this initial regression.  The residuals are not white noise.  Subsequent methods and analysis are required to evaluate the complexities presented by this dataset. 
+All the residual assumptions failed for this initial regression.  The residuals are not white noise.  Subsequent methods and analysis will be required to extract the time series information presented in this dataset. 
 
 ### Model Summary
 
@@ -231,7 +235,7 @@ All the residual assumptions failed for this initial regression.  The residuals 
 summary(mlm.ts2)
 ```
 
-If the residual assumptions were found to be true one could interpret the coefficients as follows. All p-values indicate significance, except the intercept and TBillClose (though the residual distribution assumptions fail making interpretation dubious).
+If the residual assumptions were found to be true one could interpret the coefficients displayed above. All p-values indicate significance, except the intercept and TBillClose (though the residual distribution assumptions fail making interpretation dubious).
 
 - The expected value of IIPI at time zero (Feb, 1980) is `r mlm.ts2$coefficients[1]`.   
 
@@ -289,7 +293,6 @@ Again, this residuals are highly autoccorrelated and non-stationary.
 acf(rstandard(dlm.ts1))
 ```
 
-
 ### Model Summary
 
 ```{r echo = FALSE}
@@ -318,7 +321,7 @@ plot(k_list$r2adjust,xlab="k",ylab="Adj. R-squared")
 
 *Polynomial k Search - Adj. R-squared*
 
-The minimum AIC is found to be at k=14.
+The minimum AIC is found to be at $k=14$.
 
 ### Model Fit Plot
 
@@ -342,7 +345,7 @@ lines(confupper,col="blue")
 
 *Polynomial Fit, k=14*
 
-The model fits the data well in-sample, but fails within the prediction region.
+The model fits the data well in-sample, but performes poorly within the prediction region.
 
 ### Residual Assumptions
 
@@ -360,7 +363,7 @@ $H_0$ is rejected.  Autocorrelation is present in the series.
 acf(rstandard(dlm.ts2))
 ```
 
-Again, the residuals are highly autoccorrelated and non-stationary.  More work is required to improve the model. There is more inherent information in the time-series component that is not captured by this model.
+Again, the residuals are highly autoccorrelated and non-stationary.  More work is required to better capture the inherent information contained within the IIPI series.
 
 ### Model Summary
 
@@ -368,13 +371,13 @@ Again, the residuals are highly autoccorrelated and non-stationary.  More work i
 summary(dlm.ts2)
 ```
 
-This model fits the data well insample but fails in the prediction region.  While many of the coefficients in the model would be significant, as the residuals are not whtie noise, and therefore are uninterpretable.
+This model fits the in-sample data well but fails in the prediction region again.  While many of the coefficients in the model would be significant, the residuals are not white noise, therefore their interpretation is not rigorously permitted.
 
 ## Harmonic Model
 
 A de-trended harmonic model is estimated:
 
-$IIPI(t) = \hat{\beta}_0 + \hat{\beta}_1 t + \sum{\hat{\alpha_i}sin(\frac{2\pi i}{s}t)} + \sum{\hat{\beta}_icos(\frac{2\pi i}{s}t)} + \epsilon_t$
+$IIPI(t) = \hat{\beta}_0 + \hat{\beta}_1 t + \sum{\hat{\alpha}_isin(\frac{2\pi i}{s}t)} + \sum{\hat{\beta}_icos(\frac{2\pi i}{s}t)} + \epsilon_t$
 
 ### Periodogram
 
@@ -422,13 +425,13 @@ termsforremoval
 
 ### Model Summary
 
-The names of the terms are saved to a vector and subsequently removed from the model:
+The names of the terms are saved to a vector and subsequently removed from the model. The model is then estimated and dispalyed below:
 
 ```{r echo=FALSE}
 dlm.ts4.summary
 ```
 
-The model contains 85 harmonics, all sine cosine pairs are significant (due in many cases to the other being significant).
+The model contains 85 harmonics, all sine cosine pairs are significant (due in many cases to the other respective term being significant).
 
 ### Model Fit Plot
 
@@ -454,7 +457,7 @@ lines(confupper,col="blue")
 
 *Harmonic Model with 85 harmonics*
 
-The model with 85 terms fits the in-sample data nearly perfectly. However, due to failure in the prediction region the harmonic term reduction is investigated to assess if the predictive utility can be improved.
+The model with 85 terms fits the in-sample data nearly perfectly (Adjusted R-squared:  0.9979). However, due to failure in the prediction region harmonic term reduction is investigated to assess if the predictive utility can be improved.
 
 The three in-sample metrics are displayed as a function of increasing harmonics:
 
@@ -466,7 +469,7 @@ plot(dlm.ts.r2tlb$aic, xlab = "Harmonics",ylab = "AIC")
 
 *Harmonics vs. Fit Metrics*
 
-AIC does not minimize in this region and adjusted R-squared continues to increase. BIC has a local minimum at 65 harmonics.  The following is the fit with 65 harmonics:
+AIC does not minimize in this region and adjusted R-squared continues to increase. BIC has a minimum at 65 harmonics.  The following is the fit with 65 harmonics:
 
 ```{r echo = FALSE}
 #Plotting the confidence and prediction intervals
@@ -477,7 +480,7 @@ predupper = predint[,3]
 conflower = confint[,2]
 confupper = confint[,3]
 
-plot(df.ts.modelset.harmonic2$IIPI, col="black", xlab = "Time", ylab = "IIPI")
+plot(df.ts.modelset.harmonic2$IIPI, col="light grey", xlab = "Time", ylab = "IIPI")
 lines(predint[,1],col="red")
 abline(v=424,col="blue", lty=5)
 lines(predlower,col="orange")
@@ -510,20 +513,22 @@ lines(confupper,col="blue")
 
 *Harmonic Model with 65 harmonics*
 
-The 65 harmonic model appears to still overfit the data, therefore instead in an effort to balance the bias-variance trade off the visual elbow method is used for adjusted R-squared metric.
+The 65 harmonic model appears to still overfit the data, therefore instead in an effort to balance the bias-variance trade-off the visual elbow method is used with the adjusted R-squared metric.
 
-This results in 15 harmonics before there is a reduced rate of increase in adjusted R-squared a linear model. Therefore this model is estimated:
+Visual inspection provides that there are about 15 harmonics before there is a reduced rate of increase in adjusted R-squared. Therefore the 15 harmonic model is estimated:
 
 ```{r echo = FALSE}
 dlm.ts6.summary
 ```
 
-The terms are assessed for pair-wise significance. Only two trigonomtric terms (not of the same harmonic) are not significant.
+The Adjusted R-squared is still very high in-sample, (0.9784). 
+
+Terms for this model are assessed for pair-wise significance. Only two trigonomtric terms (not of the same harmonic) are not significant.  Therefore this model is retained for comparison going forward.
 
 ```{r echo = FALSE}
 which(dlm.ts6.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
 ```
-This effort in variable reduction highlights the failure of the deterministic approaches to provide predictive utility.
+This effort in variable reduction highlights the failure of the deterministic approaches to provide predictive utility in time-series modelling.
 
 ```{r echo = FALSE}
 #Plotting the confidence and prediction intervals
@@ -579,17 +584,17 @@ Box.test(rstandard(dlm.ts6), lag=36)
 acf(rstandard(dlm.ts6))
 ```
 
-The residuals appear stationary but not white noise, with fast exponential periodic decay.
+The residuals appear stationary but not white noise, with fast sinusoidal decay.
 
 # Stochastic Models
 
 ## ARIMA Models
 
-Next Stochstic Models are estimated.
+Next, Stochstic Models are estimated.
 
-Before fitting a stochastic model the series must be stationary which it is not in its raw form. Taking the first difference results in stationarity with exponential periodic decay, as seen above.
+Before fitting a stochastic model the series must be stationary which it is not in its raw form. Taking the first difference results in stationarity with sinusoidal decay, as seen above.
 
-Having acheived stationarity at the first difference, the PACF is reviewed to determine the ARIMA model parameters:
+Having acheived stationarity, at the first difference, the PACF is reviewed to determine appropriate ARIMA model parameters:
 
 ```{r echo = FALSE}
 pacf(diff(df.ts.modelset$IIPI))
@@ -597,9 +602,9 @@ pacf(diff(df.ts.modelset$IIPI))
 
 In reviewing the ACF and PACF there are three proposed reasonable ARIMA models for investigation:
 
-- ARIMA(2,1,0) due to perceived cutoff of the PACF at 2, and interpretable exponenital decay of the ACF.
+- ARIMA(2,1,0) due to perceived cutoff of the PACF at 2, and interpretable sinusoidal decay of the ACF.
 
-- ARIMA(0,1,5) due to percevied cutoff of the ACF at 5, and interpretable exponential decay of the PACF.
+- ARIMA(0,1,5) due to perceived cutoff of the ACF at 5, and interpretable sinusoidal decay of the PACF.
 
 - ARIMA(x,1,y) due to the perceived exponential decay of both ACF and PACF; $x,y = {0,1,2}$
 
@@ -608,8 +613,8 @@ This assessment is validated using a subset search of p and q values (ARIMA(p,1,
 ```{r echo=FALSE}
 ggplot(arima_table1, aes(x = p_index, y = q_index, fill = arima_aic)) + 
   geom_tile(color = "black") + 
-  scale_fill_gradientn(colors = hcl.colors(20,"RdYlGn")) + 
-  coord_fixed()
+  scale_fill_gradientn(colors = hcl.colors(20,"RdYlGn")) +
+  scale_x_discrete(name = "p_index", limits = c(0:10)) + scale_y_discrete(name = "q_index", limits = c(0:10))
 ```
 
 *ARIMA model AIC Heatmap*
@@ -628,7 +633,7 @@ arima111
 arima015
 ```
 
-As can be seen above, all coefficients are signifcant for each model except $\theta_3$ and $\theta_4$ of the MA(5) model.  Therefore this one is dropped for evaluation going forward.  It also, of the three models has the highest AIC.
+As can be seen above, all coefficients are signifcant for each model except $\theta_3$ and $\theta_4$ of the MA(5) model.  Therefore this one is dropped for comparison going forward.  It also, of the three models, has the highest AIC.
 
 The ARIMA(2,1,0) and ARIMA(1,1,1) equations follow:
 
@@ -666,7 +671,7 @@ abline(v=424,col="blue", lty=5)
 
 *ARIMA(2,1,0) Model with sequential prediction*
 
-Similarly for ARIMA(1,1,1:)
+Similarly for ARIMA(1,1,1):
 
 ```{r echo = FALSE}
 plot(df.ts.modelset$IIPI, col="lightgray", xlab = "Time", ylab = "IIPI")
@@ -687,11 +692,11 @@ abline(v=424,col="blue", lty=5)
 
 *ARIMA(1,1,1) Model with sequential prediction*
 
-Both models perform will and are retained when comparing predictions.
+Both models perform well and are retained for comparison
 
 ### Confirming White Noise
 
-The residuals are review for white noise.
+The residuals are reviewed for white noise.
 
 ```{r echo = FALSE}
 Box.test(arima210$residuals, lag=20)
@@ -701,15 +706,25 @@ Box.test(arima210$residuals, lag=20)
 Box.test(arima111$residuals, lag=20)
 ```
 
-Both are marginally white noise based on the above Box-Pierce tests.  Sucesss (!) but these models can be improved stochastic residual correction.
+Both are marginally white noise based on the above Box-Pierce tests.  Sucesss (!) but these models can be improved stochastic residual correction to follow.
+
+# Stoachastic Residual Corrections
+
+The following models are reviewed in this section to assess residual correctoin using ARIMA on the respective resulting residuals:
+
+- Regression Model
+
+- Harmonic Model with 15 harmonics
+
+The Polynomial Model with $k=14$ is not included in this section due to computational restrictions in the approximation methods used to estimate ARIMA models.  Reciprocals are taken of the various polynomial terms which result in computational singularities. For example $t^{14}$ at index $t=423$ results in a value greater that $10^{36}$.
 
 ## Stoachastic Residual Correction for Regression Model
 
-The regression model was:
+The regression model:
 
 $IIPI(`r names(mlm.ts2$coefficients)[2:length(names(mlm.ts2$coefficients))] %>% paste(sep = " ")`) = \hat{\beta}_0 + \hat{\beta}_1 TBillCLose + \hat{\beta}_3 InfRate + \hat{\beta}_5 M2 + \hat{\beta}_6 UnempRate + \hat{\beta}_7 Recession + \epsilon_t$
 
-And the residuals of this model were not stationary, therefore the first difference is taken confirmed for stationarity:
+And the residuals of this model were not stationary, therefore the first difference is taken to induce stationarity:
 
 ```{r echo = FALSE}
 acf(diff(mlm.ts4$residuals))
@@ -721,18 +736,19 @@ Next the PACF is investigated for ARIMA parameter confirmation:
 pacf(diff(mlm.ts4$residuals))
 ```
 
-As both appear potentially cuff off or fast sinusoidal decay a search is again performed for reasonable $p$ and $q$ values:
+As both appear potentially cuff-off or fast sinusoidal decay a search is again performed for reasonable $p$ and $q$ values:
 
-```{r echo=FALSE}
+```{r echo=FALSE, warning=FALSE}
 ggplot(arima_table3 %>% dplyr::filter(p_index != 0), aes(x = p_index, y = q_index, fill = arima_aic)) + 
   geom_tile(color = "black") + 
   scale_fill_gradientn(colors = hcl.colors(20,"RdYlGn")) + 
-  coord_fixed()
+  coord_fixed()+
+  scale_x_discrete(name = "p_index", limits = c(0:10)) + scale_y_discrete(name = "q_index", limits = c(0:3))
 ```
 
 *ARIMA model AIC Heatmap*
 
-As seen in the above chart, the minimum AIC occurs at p=3, q=0. Therefore an ARIMA(3,0,0) is fit to the residuals.
+As seen in the above chart, the minimum AIC occurs at $p=3$, $q=0$. Therefore an ARIMA(3,0,0) is fit to the residuals.
 
 ```{r echo=FALSE}
 arima_table3 %>% arrange(arima_aic) %>% head(3)
@@ -751,7 +767,7 @@ abline(v=424,col="blue", lty=5)
 
 *Regression with ARIMA(3,0,0) n ahead*
 
-Again, when looking at one-step ahead values, the prediction clearly performs much better:
+However as seen before, when looking at one step ahead prediction values, the prediction clearly performs much better:
 
 ```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[424:433], col="black", xlab = "Time", ylab = "IIPI")
@@ -761,7 +777,7 @@ abline(v=424,col="blue", lty=5)
 
 ```
 
-*Regression with ARIMA(3,0,0) sequentia - prediction region*
+*Regression with ARIMA(3,0,0) sequential - prediction region*
 
 ### Model Summary
 
@@ -778,11 +794,11 @@ acf(mlm.ts2.arima300$residuals)
 Box.test(mlm.ts2.arima300$residuals, lag=20)
 ```
 
-The residuals of the regression model with ARMIA resdiual correction are just barely white noise.
+The residuals of the regression model with ARMIA residual correction are just barely white noise.
 
 ## Stochastic Residual Correction for Harmonic Model
 
-The harmonic model was:
+The harmonic model was ($i \in \{1:15\}$:
 
 $IIPI(t) = \hat{\beta}_0 + \hat{\beta}_1 t + \sum{\hat{\alpha_i}sin(\frac{2\pi i}{s}t)} + \sum{\hat{\beta}_icos(\frac{2\pi i}{s}t)} + \epsilon_t$
 
@@ -798,13 +814,14 @@ The PACF is investigated to determine the appropriate ARIMA model:
 pacf(dlm.ts6$residuals)
 ```
 
-Both the ACF and PACF do not have a clear cut off, and could be interpreted as showing exponential decay.   Expectation is therefore that an ARMA(p,q) with p and q not equal to 0, will likely be applicable for the residual correction.  
+Both the ACF and PACF do not have a clear cut-off, and could be interpreted as showing exponential decay.   Expectation is therefore that an ARMA(p,q) with $p,q \notin {0}$, will likely be applicable for the residual correction.  
 
-```{r echo=FALSE}
+```{r echo=FALSE, warning=FALSE}
 ggplot(arima_table2, aes(x = p_index, y = q_index, fill = arima_aic)) + 
   geom_tile(color = "black") + 
   scale_fill_gradientn(colors = hcl.colors(20,"RdYlGn")) + 
-  coord_fixed()
+  coord_fixed()+
+  scale_x_discrete(name = "p_index", limits = c(0:10)) + scale_y_discrete(name = "q_index", limits = c(0:10))
 ```
 
 *ARIMA Model AIC Heatmap*
@@ -830,7 +847,7 @@ Again, as expected the n ahead prediction performs poorly.
 
 ```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[424:433], col="black", xlab = "Time", ylab = "IIPI")
-title("Regression with ARIMA(2,0,1) sequential")
+title("Harmonic Model (15 harmonics) with ARIMA(2,0,1) sequential")
 lines(pred.dlm.ts6.arima2011step[424:433],col="red")
 abline(v=424,col="blue", lty=5)
 ```
@@ -860,13 +877,13 @@ acf(dlm.ts6.arima201$residuals)
 Box.test(dlm.ts6.arima201$residuals, lag=20)
 ```
 
-Despite the correction, residuals of the model do not result in white noise.
+Despite the correction, residuals of the model do not result in white noise, however.
 
 ## Generalized Autoregressive conditionally Heteroscedastic Model (GARCH)
 
 The following section investigates using GARCH.  First, as shown before the series and its first difference are not white noise and therefore using GARCH on its own is not applicable.  However, many of the previous models resulted in white noise residuals, and are investigated here.
 
-The following models thus far have resulted in white noise:
+The following models thus far have resulted in white noise residuals:
 
 - ARIMA(2,1,0)
 
@@ -874,11 +891,11 @@ The following models thus far have resulted in white noise:
 
 - Regression with ARIMA(3,0,0) on the residuals
 
-## ARIMA Model Generalized Autoregressive conditionally Heteroscedastic Model (GARCH)
+## ARIMA Models with (GARCH)
 
 ### ARIMA(2,1,0) with GARCH
 
-Residuals are first to checked for GARCH model potential:
+Residuals are first checked for GARCH model potential:
 
 ```{r echo=FALSE}
 acf(arima210$residuals)
@@ -913,13 +930,13 @@ garch_list_2 <-
 garch_list_2
 ```
 
-The output is not included here, but was reviewed for best AIC, resulting in: ARIMA(2,1,0) with  GARCH(1,1)
+The output is not included here, but was reviewed for best AIC, resulting in: ARIMA(2,1,0) with  GARCH(1,1):
 
 ```{r echo=FALSE}
 arima210.garch11
 ```
 
-The insignificant mean is removed from the model and all other model parameters are significant.
+The was mean is removed from the model and all model parameters are significant.
 
 ### White noise confirmation
 
@@ -929,7 +946,7 @@ Box.test(arima210.garch11@residuals/arima210.garch11@sigma.t, lag=20)
 ```
 
 ```{r echo=FALSE}
-acf((arima210.garch11@residuals/arima210.garch11@sigma.t)^2, main="Residuals")
+acf((arima210.garch11@residuals/arima210.garch11@sigma.t)^2, main="Residuals^2")
 Box.test((arima210.garch11@residuals/arima210.garch11@sigma.t)^2, lag=20)
 ```
 
@@ -941,9 +958,9 @@ The following is the predicted conditional variance of the IIPI first-difference
 predict(arima210.garch11, plot = TRUE)
 ```
 
-As expected the n ahead prediction value tends toward an asymptotic value:
+As expected the n ahead prediction values tend toward the mean asymptotically:
 
-```{r}
+```{r echo = FALSE}
 plot(df.ts.modelset$IIPI, col="light grey", xlab = "Time", ylab = "IIPI")
 title("ARIMA(2,1,0) with GARCH(1,1) n ahead")
 lines(pred.arima210.garch11nahead,col="red")
@@ -952,14 +969,14 @@ abline(v=424,col="blue", lty=5)
 
 However, when taking the predictions 1 step ahead, the model predicts exceptionally well (!):
 
-```{r}
+```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
 title("ARIMA(2,1,0) with GARCH(1,1) sequential (!)")
 lines(pred.arima210.garch11_1step[422:433],col="red")
 abline(v=424,col="blue", lty=5)
 ```
 
-This result can be seen in the MAPE comparison summarised in the Prediction Comparison section.
+This result can be seen in the MAPE comparison summarised in the Prediction Comparison section below.
 
 ### ARIMA(1,1,1) with GARCH
 
@@ -973,7 +990,7 @@ acf(arima111$residuals^2)
 Box.test(arima111$residuals^2)
 ```
 
-As can be seen, the again similar to the ARIMA(2,1,0) model, the ARIMA(1,1,1) residuals are white noise, but the squared residuals are not.  This is an excellent candidate for using GARCH!
+As can be seen, the again similar to the ARIMA(2,1,0) model, the ARIMA(1,1,1) residuals are white noise, but the squared residuals are not.  This is an excellent candidate for using GARCH, again!
 
 The PACF is displayed to investigate the possible GARCH order.
 
@@ -1014,7 +1031,7 @@ Box.test(arima111.garch11@residuals/arima111.garch11@sigma.t, lag=20)
 ```
 
 ```{r echo=FALSE}
-acf((arima111.garch11@residuals/arima111.garch11@sigma.t)^2, main="Residuals")
+acf((arima111.garch11@residuals/arima111.garch11@sigma.t)^2, main="Residuals^2")
 Box.test((arima111.garch11@residuals/arima111.garch11@sigma.t)^2, lag=20)
 ```
 
@@ -1028,7 +1045,7 @@ predict(arima111.garch11, plot = TRUE)
 
 As expected the n ahead prediction value tends toward an asymptotic value:
 
-```{r}
+```{r echo = FALSE}
 plot(df.ts.modelset$IIPI, col="light grey", xlab = "Time", ylab = "IIPI")
 title("ARIMA(1,1,1) with GARCH(1,1) n ahead")
 lines(pred.arima111.garch11nahead,col="red")
@@ -1037,16 +1054,16 @@ abline(v=424,col="blue", lty=5)
 
 However, when taking the predictions 1 step ahead, the model predicts exceptionally well (!):
 
-```{r}
+```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
 title("ARIMA(1,1,1) with GARCH(1,1) sequential (!)")
 lines(pred.arima111.garch11_1step[422:433],col="red")
 abline(v=424,col="blue", lty=5)
 ```
 
-This result can be seen in the MAPE comparison summarised in the Prediction Comparison section.
+This result can be seen in the MAPE comparison summarized in the Prediction Comparison section.
 
-### Regression with ARMIA(3,0,0) on residuals and with GARCH
+### Regression with ARMIA(3,0,0) on residuals and GARCH
 
 Residuals are first to checked for GARCH model potential:
 
@@ -1068,7 +1085,7 @@ pacf(mlm.ts2.arima300$residuals^2)
 
 ### Model Summary
 
-As no model was immediately obvious from the ACF and PACF, a appropriate GARCH model was assumed and estimated using the *rugarch* R library - this was undertaken I was unable to find a way to include external regression parameters utilizing *fGARCH*:
+As no model was immediately obvious from the ACF and PACF, a appropriate GARCH model was assumed and estimated using the *rugarch* R library. NOTE:  for this implementation of GARCH, *fGARCH* was not used, as it did not appear to allow for inclusion of external regression parameters:
 
 ```{r eval = FALSE}
 p_index <- list()
@@ -1076,20 +1093,19 @@ q_index <- list()
 d <- diff(df.ts.modelset.train$IIPI) 
 x <- df.ts.modelset.train[2:423,] %>% select(-IIPI,-Date_form,-GDP,-IndPro) %>% as.matrix()
 
-#n=1e3; set.seed(1); x=rnorm(n); set.seed(2); y=rnorm(n); set.seed(3); z=rnorm(n)
 spec = ugarchspec(mean.model = list(armaOrder = c(3, 0), external.regressors = cbind(x)))
 fit = ugarchfit(spec = spec, data = d)
 ```
 
-```{r}
+```{r echo = FALSE}
 fit
 ```
 
 To summarize the output above:
 
-mxreg1 is through mxreg7 correspond to `r df.ts.modelset.train[2:423,] %>% select(-IIPI,-Date_form,-GDP,-IndPro) %>% names()`
+mxreg1 is through mxreg5 correspond to `r df.ts.modelset.train[2:423,] %>% select(-IIPI,-Date_form,-GDP,-IndPro) %>% names()`
 
-It appears that with inclusion of the GARCH on the residuals $\phi_2$ and $\phi_3$ are no longer significant, and the only significant regressor is again InfRate.  The GARCH coefficients are significant.
+It appears that with inclusion of the GARCH on the residuals $\phi_2$ and $\phi_3$ are no longer significant, and the only significant regressor is again InfRate (as expected).  All GARCH coefficients are significant.
 
 ### White noise confirmation
 
@@ -1100,18 +1116,16 @@ Box.test(fit@fit$residuals, lag=20)
 
 Interestingly, residuals of this model would not be considered white noise.
 
-The following is the predicted conditional variance of the IIPI first-difference:
-
 As expected the n ahead prediction value tends toward an asymptotic value:
 
-```{r}
+```{r echo=FALSE}
 plot(df.ts.modelset$IIPI, col="light grey", xlab = "Time", ylab = "IIPI")
 title("Regression with ARIMA(3,0,0) then GARCH(1,1)")
 lines(pred.fit,col="red")
 abline(v=424,col="blue", lty=5)
 ```
 
-However, when taking the predictions 1 step ahead, the model performs much better:
+However, when taking the predictions 1 step ahead, the model performs much better, though not as well as the ARIMA models above:
 
 ```{r}
 plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
@@ -1122,79 +1136,85 @@ abline(v=424,col="blue", lty=5)
 
 ## Vector Autoregressive Moving Average
 
-To perform VARMA, first, stationarity is induced in all variables by taking the first difference. Recession is removed from the dataset as it is an indicator variable.  All pair-wise CCFs are checked for bivariate white noise.  If one variable is found to be bivariate white noise with all others, it should be removed from the subsequent VARMA model:
+VARMA is used to estimate systems of time series data, allowing for concurent parameter estimation. 
 
-```{r}
+To perform VARMA, first, stationarity is induced in all variables by taking the first difference. Recession is removed from the dataset as it is an indicator variable and is therefore not applicable in VARMA modelling.  All pair-wise cross-correlation functions (CCFs) are checked for bivariate white noise.  If one variable is found to be bivariate white noise with all others, it would be removed from the subsequent VARMA model:
+
+```{r echo = FALSE}
 par(mfrow=c(2,2))
-ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$TBillClose) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$GDP) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$InfRate) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$M2) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$GDP) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$InfRate) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$M2) # IS WHITE NOISE
-ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$InfRate) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$M2) # not white noise
-ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$IndPro) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$M2) # IS WHITE NOISE
-ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$M2) # not white noise
-ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$UnempRate) # not white noise...
-ccf(df.ts.modelset.train.vector.diff$M2,df.ts.modelset.train.vector.diff$UnempRate) # IS WHITE NOISE
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$TBillClose, ylab = "CCF", main = "IIPI,TBillClose") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$GDP, ylab = "CCF", main = "IIPI,GDP") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$InfRate, ylab = "CCF", main = "IIPI,InfRate") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$IndPro, ylab = "CCF", main = "IIPI,IndPro") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$M2, ylab = "CCF", main = "IIPI,M2") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "IIPI,UnempRate") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$GDP, ylab = "CCF", main = "TBillClose,GDP") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$InfRate, ylab = "CCF", main = "TBillClose,InfRate") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$IndPro, ylab = "CCF", main = "TBillClose,IndPro") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$M2, ylab = "CCF", main = "TBillClose,M2") # IS WHITE NOISE
+ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "TBillClose,UnempRate") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$InfRate, ylab = "CCF", main = "GDP,InfRate") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$IndPro, ylab = "CCF", main = "GDP,Indrop") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$M2, ylab = "CCF", main = "GDP,M2") # not white noise
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "GDP,UnempRate") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$IndPro, ylab = "CCF", main = "InfRate,IndPro") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$M2, ylab = "CCF", main = "InfRate,M2") # IS WHITE NOISE
+ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "InfRate,UnempRate") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$M2, ylab = "CCF", main = "IndPro,M2") # not white noise
+ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "IndPro,UnempRate") # not white noise...
+ccf(df.ts.modelset.train.vector.diff$M2,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "M2,UnempRate") # IS WHITE NOISE
 ```
 
-M2 is a candidate for removal from the VARMA as it is only not bivariate white noise with GDP.
+M2 is a candidate for removal from the VARMA as it is only not bivariate white noise with GDP.  However, it is retained going forward.
 
 In consideration of computation time only VAR(1) model is estimated, with a matrix of 49 $phi$ estimates:
 
-```{r}
-temp_mat <- varma1_0$coef
-colnames(temp_mat) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Recession) %>% names()
-rownames(temp_mat) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Recession) %>% names()
-temp_mat
+```{r echo = FALSE}
+temp_mat1 <- varma1_0$coef
+colnames(temp_mat1) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Recession) %>% names()
+rownames(temp_mat1) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Recession) %>% names()
+knitr::kable(temp_mat1, "simple")
 ```
 
-In interesting note: Industrial Production from the previous month has significant affect on the subsequent month's GDP!
+An interesting note: Industrial Production from the previous month has significant affect on the subsequent month's GDP!
 
 However, only those with a ratio of estimate to standard error > ~1.96 are significant:
 
 ```{r echo = FALSE}
-temp_mat <- abs(varma1_0$coef/varma1_0$secoef)
-colnames(temp_mat) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Recession) %>% names()
-rownames(temp_mat) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Recession) %>% names()
-temp_mat
+temp_mat2 <- abs(varma1_0$coef/varma1_0$secoef)
+colnames(temp_mat2) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Recession) %>% names()
+rownames(temp_mat2) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Recession) %>% names()
+knitr::kable(temp_mat2, "simple")
 ```
 
-The vector of residuals are not white noise:
+The vectors of residuals are not white noise:
 
-```{r}
+```{r echo=FALSE}
 par(mfrow=c(2,2))
-acf(varma1_0$residuals[,1])
-acf(varma1_0$residuals[,2])
-acf(varma1_0$residuals[,3])
-acf(varma1_0$residuals[,4])
-acf(varma1_0$residuals[,5])
-acf(varma1_0$residuals[,6])
-acf(varma1_0$residuals[,7])
+acf(varma1_0$residuals[,1], main = "IIPI")
+acf(varma1_0$residuals[,2], main = "TBillClose")
+acf(varma1_0$residuals[,3], main = "GDP")
+acf(varma1_0$residuals[,4], main = "InfRate")
+acf(varma1_0$residuals[,5], main = "IndPro")
+acf(varma1_0$residuals[,6], main = "M2")
+acf(varma1_0$residuals[,7], main = "UnempRate")
 ```
 ### Model Fit
 
-Specifically for IIPI exclusivley, the model fit is:
+IIPI exclusively, the model fit is:
 
-```{r}
-plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
+```{r echo = FALSE}
+plot(df.ts.modelset$IIPI[423:434], col="light grey", xlab = "Time", ylab = "IIPI")
 title("VAR(1)")
 lines(pred.varma1_0.nahead,col="red")
 abline(v=424,col="blue", lty=5)
 ```
 
+Sequential 1 step ahead is not included for comparison, as this requires re-estimating the model ten times in a loop, in consideration of computation time.  However, it is expected that it would perform better than the n ahead ($n =10$), as seen for the other ARIMA models.  VARMA would be no different in this regard.
+
 ## Prediction Comparison
+
+The various models outlined above are compared using mean absolute percent error (MAPE), for prediction accuracy.  The 1 step sequential predictions out perform all other methods. The regression model and deterministic model with monthly indicators perform worst.  
 
 ```{r echo=FALSE, warings=FALSE}
 
@@ -1204,7 +1224,7 @@ mape <- function(d,p){
 
 comparetable <- tibble(
   Model = c(
-    'Linear Model, variable reduced',
+    'Regression Model, variable reduced',
     'Deterministic Model, Monthly Indicator with Trend',
     'Deterministic Model, Polynomial k=14',
     'Deterministic Model, 100 Harmonics',
@@ -1219,8 +1239,8 @@ comparetable <- tibble(
     'ARIMA(0,1,5) seq. 1 ahead',
     'Regression, residual ARIMA(3,0,0), n ahead',
     'Regression, residual ARIMA(3,0,0), seq. 1 ahead',
-    'Harmonic Model, residual ARIMA, n ahead',
-    'Harmonic Model, residual ARIMA, seq. 1 ahead',
+    'Deterministic Model, 15 Harmonics, residual ARIMA, n ahead',
+    'Deterministic Model, 15 Harmonics, residual ARIMA, seq. 1 ahead',
     'ARIMA(1,1,1) with GARCH(1,1), n ahead',
     'AIMAA(1,1,1) with GARCH(1,1) seq. 1 ahead',
     'VARMA prediction of IIPI',
@@ -1276,110 +1296,127 @@ comparetable <- tibble(
     mape(d = df.ts.modelset.test$IIPI, 
          p = pred.fit[423:432]),
     mape(d = df.ts.modelset.test$IIPI, 
-         p = pred.reg.arima300.garch11_1step[422:433])
+         p = pred.reg.arima300.garch11_1step[423:432])
     )
 )
 
 
-comparetable %>% arrange(MAPE)
+kable(comparetable %>% arrange(MAPE), "simple")
 ```
 
 ## Transfer Function
 
-First prewhitening is performed on all variables:
+In order to perform Transfer Function modelling, next pre-whitening must be performed on all the stationary first- differenced independent variables.  This is accomplished using various ARIMA models on each independent variable:
 
-```{r}
-acf(diff(df.ts.modelset.train.vector$TBillClose))
-pacf(diff(df.ts.modelset.train.vector$TBillClose))
-arimaTBillClose <- arima(df.ts.modelset.train.vector$TBillClose,order = c(27,1,0))
+```{r echo = FALSE}
+acf(diff(df.ts.modelset.train.vector.diff$TBillClose))
+pacf(diff(df.ts.modelset.train.vector.diff$TBillClose))
+arimaTBillClose <- arima(df.ts.modelset.train.vector.diff$TBillClose,order = c(2,0,2))
 Box.test(arimaTBillClose$residuals)
 ```
 
-```{r}
-acf(diff(df.ts.modelset.train.vector$GDP))
-pacf(diff(df.ts.modelset.train.vector$GDP))
-arimaGDP <- arima(df.ts.modelset.train.vector$TBillClose,order = c(6,1,0))
+An ARIMA(2,0,2) is used to pre-whiten the first-differenced TBillClose, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
+
+```{r echo = FALSE}
+acf(diff(df.ts.modelset.train.vector.diff$GDP, lag = 3))
+pacf(diff(df.ts.modelset.train.vector.diff$GDP))
+arimaGDP <- arima(df.ts.modelset.train.vector.diff$GDP,order = c(1,0,1))
 Box.test(arimaGDP$residuals)
 ```
 
-```{r}
-acf(diff(df.ts.modelset.train.vector$InfRate))
-pacf(diff(df.ts.modelset.train.vector$InfRate))
-arimaInfRate <- arima(df.ts.modelset.train.vector$InfRate,order = c(2,1,0), seasonal=list(order=c(1,1,1), period=12))
+An ARIMA(1,0,1) is used to pre-whiten the first-differenced TBillClose, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
+
+```{r echo = FALSE}
+acf(diff(df.ts.modelset.train.vector.diff$InfRate))
+pacf(diff(df.ts.modelset.train.vector.diff$InfRate))
+arimaInfRate <- arima(df.ts.modelset.train.vector.diff$InfRate,order = c(2,0,0), seasonal=list(order=c(1,0,1), period=12))
 Box.test(arimaInfRate$residuals)
 ```
 
-```{r}
-acf(diff(df.ts.modelset.train.vector$IndPro))
-pacf(diff(df.ts.modelset.train.vector$IndPro))
-arimaIndPro <- arima(df.ts.modelset.train.vector$IndPro,order = c(2,1,2))
+A SARIMA(2,0,0)(1,0,1)$_{12}$ is used to pre-whiten the first-differenced InfRate, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
+
+```{r echo = FALSE}
+acf(diff(df.ts.modelset.train.vector.diff$IndPro))
+pacf(diff(df.ts.modelset.train.vector.diff$IndPro))
+arimaIndPro <- arima(df.ts.modelset.train.vector.diff$IndPro,order = c(2,0,2))
 Box.test(arimaIndPro$residuals)
 ```
 
-```{r}
-acf(diff(df.ts.modelset.train.vector$M2))
-pacf(diff(df.ts.modelset.train.vector$M2))
-arimaM2 <- arima(df.ts.modelset.train.vector$M2,order = c(1,1,1), seasonal=list(order=c(1,1,1), period=12))
+An ARIMA(2,0,2) is used to pre-whiten the first-differenced IndPro, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
+
+```{r echo = FALSE}
+acf(diff(df.ts.modelset.train.vector.diff$M2))
+pacf(diff(df.ts.modelset.train.vector.diff$M2))
+arimaM2 <- arima(df.ts.modelset.train.vector.diff$M2,order = c(1,0,0), seasonal=list(order=c(1,0,0), period=12))
 Box.test(arimaM2$residuals)
 ```
 
-```{r}
-acf(diff(df.ts.modelset.train.vector$UnempRate))
-pacf(diff(df.ts.modelset.train.vector$UnempRate))
-arimaUnempRate <- arima(df.ts.modelset.train.vector$UnempRate,order = c(2,1,2))
+A SARIMA(1,0,0)(1,0,0)$_{12}$ is used to pre-whiten the first-differenced M2, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
+
+```{r echo = FALSE}
+acf(diff(df.ts.modelset.train.vector.diff$UnempRate))
+pacf(diff(df.ts.modelset.train.vector.diff$UnempRate))
+arimaUnempRate <- arima(df.ts.modelset.train.vector.diff$UnempRate,order = c(2,1,2))
 Box.test(arimaUnempRate$residuals)
 ```
 
-Next checking CCFs to see if there are applicable b, r, s values:
+An ARIMA(2,0,2) is used to pre-whiten the first-differenced UnempRate, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
-```{r}
-ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$TBillClose)
-ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$GDP)
-ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$InfRate)
-ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$IndPro)
-ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$M2)
-ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$UnempRate)
+Next the CCFs are display determine $b$, $r$, $s$ values:
+
+```{r echo = FALSE}
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$TBillClose, ylab = "CCF", main = "IIPI,TBillClose")
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$GDP, ylab = "CCF", main = "IIPI,GDP")
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$InfRate, ylab = "CCF", main = "IIPI,InfRate")
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$IndPro, ylab = "CCF", main = "IIPI,IndPro")
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$M2, ylab = "CCF", main = "IIPI,M2")
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$UnempRate, ylab = "CCF", main = "IIPI,UnempRate")
 ```
 
-All are white noise - there is not a reasonable transfer function.
+## Transfer Function on IndPro
 
-However, as example of the transfer function implementation,  it can be seen that IIPI can be used to predict M2.
-
-First the variables are prepared, and a transfer function is estimated based on, $b=0$, $r=2$, $s=10$:
+Taking IndPro as the independent variable, and $b = 2$, $r = 1$, and $s = 0$.
 
 ```{r eval = FALSE}
-X <- arima111$residuals[2:423]- mean(arima111$residuals)
-Y <- diff(df.ts.modelset.train$M2) - mean(diff(df.ts.modelset.train$M2))
-
-acf(arima111$residuals[2:423])
-acf(diff(df.ts.modelset.train$M2))
-
-m<-arimax(Y, order=c(1,0,0), fixed=c(0,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA), xtransf=data.frame(X), transfer=list(c(2,10)), include.mean = FALSE)
+X_b2 <- df.ts.modelset.train.vector.prewhite$IndPro[1:421]- mean(df.ts.modelset.train.vector.prewhite$IndPro)
+Y_b2 <- df.ts.modelset.train.vector.prewhite$IIPI[3:423] - mean(df.ts.modelset.train.vector.prewhite$IIPI)
 ```
 
-```{r}
-m
-acf(m$residuals, na.action = na.pass)
-Box.test(m$residuals)
+The transfer function is estimated, forcing the residual correction to zero, first to investigate:
+
+```{r eval = FALSE} 
+m1<-arimax(Y_b2, order=c(1,0,0), fixed=c(0,NA,NA), xtransf=data.frame(X_b2), transfer=list(c(1,0)), include.mean = FALSE)
 ```
 
-The model coefficients are mostly significant, based on the ratio of estimates to s.e., but the residuals of the model are not white noise and seen in the above Box-Pierce and ACF. This is corrected using $SARIMA(1,0,0)(1,0,0)_{12}$:
-
-```{r}
-m_arima_resid
+```{r echo = FALSE}
+m1
 ```
 
-```{r}
-Box.test(m_arima_resid$residuals)
+The model coefficients are mostly significant, based on the ratio of estimates to standard error.
+
+```{r echo = FALSE}
+acf(m1$residuals, na.action = na.pass)
+pacf(m1$residuals, na.action = na.pass)
+Box.test(m1$residuals)
 ```
 
-Using this transfer function to model M2 the residuals M2 result in white noise.
+However, the residuals of the model are not white noise and seen in the above Box-Pierce and ACF. This is corrected using $ARIMA(1,0,1)$:
 
-$M2_t = \frac{\omega_0 - \omega_1B-\omega_2B^2}{1 - \delta_0B - \delta_2B^2-\delta_3B^3-\delta_4B^4-\delta_5B^5 - \delta_6B^6- \delta_7B^7-\delta_8B^8-\delta_9B^9-\delta_{10}B^{10}}$
+```{r echo = FALSE}
+m_arima11_resid
+```
+
+```{r echo = FALSE}
+Box.test(m_arima11_resid$residuals)
+```
+
+The transfer function model of IIPI using IndPro as predictor with ARIMA(1,0,1) correction on the residuals results in white noise.  The model estimated is:
+
+$IIPI_t = \frac{\omega_0}{1 - \delta_1B}IndPro_{t-2} + \epsilon_t$ 
 
 # Conclusion
 
-The choice of independent variables were unfortunately lacking in predictive value, but the excerise outlined in this project was enlightening.
+The choice of independent variables were unfortunately lacking in predictive value, but the exercise outlined in this project was enlightening and useful in understanding the value of each method.
 
 - Deterministic models can be made as accurate as desired within sample, but as soon as prediction is involved, the bias-variance trade off has to be accounted for.
 
@@ -1387,7 +1424,9 @@ The choice of independent variables were unfortunately lacking in predictive val
 
 - N step ahead predictions are very poor typically beyond 1 step.
 
-- Sequential Prediction is 
+- Sequential Prediction is much better when interested in predictive value.
+
+- A transfer function with s and r equal to zero is simply a regression model.
 
 
 

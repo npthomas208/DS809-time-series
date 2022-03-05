@@ -835,14 +835,6 @@ pred.dlm.ts6.arima201nahead <- df.ts.modelset.train$IIPI - (dlm.ts6.arima201$res
 pred.dlm.ts6.arima201nahead <- pred.dlm.ts6.arima201nahead %>% append(predict(dlm.ts6.arima201,n.ahead = 10, new = data.frame(df.ts.modelset.harmonic.test1 %>%select(-c('IIPI'))))$pred)
 ```
 
-```{r}
-mlm.ts2.arima300 <- arima(df.ts.modelset.train$IIPI, order =c(3,0,0), xreg = df.ts.modelset.train %>% select(-c('Date_form','IIPI','GDP','IndPro')))
-mlm.ts2.arima300
-
-pred.mlm.ts2.arima300nahead <- df.ts.modelset.train$IIPI - (mlm.ts2.arima300$residuals %>% unlist())
-pred.mlm.ts2.arima300nahead <- pred.mlm.ts2.arima300nahead%>% append(predict(mlm.ts2.arima300,n.ahead = 10, new = data.frame(df.ts.modelset.test %>%select(-c('Date_form','IIPI','GDP','IndPro'))))$pred)
-```
-
 
 ```{r}
 predictions_armatemp <- list()
@@ -856,7 +848,7 @@ for (i in 1:(dim(df.ts.modelset.harmonic.test1)[1])){
   x <- x %>% rbind(df.ts.modelset.harmonic.test1[i,] %>% select(-c('IIPI')))
 }
 
-pred.dlm.ts6.arima2011step <- df.ts.modelset.train$IIPI - (mlm.ts2.arima300$residuals %>% unlist())
+pred.dlm.ts6.arima2011step <- df.ts.modelset.train$IIPI - (dlm.ts6.arima201$residuals %>% unlist())
 pred.dlm.ts6.arima2011step <- pred.dlm.ts6.arima2011step %>% append(predictions_armatemp %>% unlist())
 pred.dlm.ts6.arima2011step
 ```
@@ -868,6 +860,14 @@ arima_table3  %>% arrange(arima_aic) %>% head(3)
 
 ```{r}
 acf(mlm.ts2$residuals)
+```
+
+```{r}
+mlm.ts2.arima300 <- arima(df.ts.modelset.train$IIPI, order =c(3,0,0), xreg = df.ts.modelset.train %>% select(-c('Date_form','IIPI','GDP','IndPro')))
+mlm.ts2.arima300
+
+pred.mlm.ts2.arima300nahead <- df.ts.modelset.train$IIPI - (mlm.ts2.arima300$residuals %>% unlist())
+pred.mlm.ts2.arima300nahead <- pred.mlm.ts2.arima300nahead%>% append(predict(mlm.ts2.arima300,n.ahead = 10, new = data.frame(df.ts.modelset.test %>%select(-c('Date_form','IIPI','GDP','IndPro'))))$pred)
 ```
 
 ```{r}
@@ -886,6 +886,12 @@ pred.mlm.ts2.arima3001step <- df.ts.modelset.train$IIPI - (mlm.ts2.arima300$resi
 pred.mlm.ts2.arima3001step <- pred.mlm.ts2.arima3001step %>% append(predictions_armatemp %>% unlist())
 pred.mlm.ts2.arima3001step
 ```
+
+#############################
+
+
+
+#############################
 
 ```{r}
 p_index <- list()
@@ -1194,49 +1200,49 @@ pred.varma1_0.nahead <- rep(df.ts.modelset.train.vector$IIPI[length(df.ts.models
 PREWHITENING:
 
 ```{r}
-acf(diff(df.ts.modelset.train.vector$TBillClose))
-pacf(diff(df.ts.modelset.train.vector$TBillClose))
-arimaTBillClose <- arima(df.ts.modelset.train.vector$TBillClose,order = c(27,1,0))
+acf(diff(df.ts.modelset.train.vector.diff$TBillClose))
+pacf(diff(df.ts.modelset.train.vector.diff$TBillClose))
+arimaTBillClose <- arima(df.ts.modelset.train.vector.diff$TBillClose,order = c(2,0,2))
 Box.test(arimaTBillClose$residuals)
 ```
 
 ```{r}
-acf(diff(df.ts.modelset.train.vector$GDP, lag = 3))
-pacf(diff(df.ts.modelset.train.vector$GDP))
-arimaGDP <- arima(df.ts.modelset.train.vector$TBillClose,order = c(6,1,0))
+acf(diff(df.ts.modelset.train.vector.diff$GDP, lag = 3))
+pacf(diff(df.ts.modelset.train.vector.diff$GDP))
+arimaGDP <- arima(df.ts.modelset.train.vector.diff$GDP,order = c(1,0,1))
 Box.test(arimaGDP$residuals)
 ```
 
 ```{r}
-acf(diff(df.ts.modelset.train.vector$InfRate))
-pacf(diff(df.ts.modelset.train.vector$InfRate))
-arimaInfRate <- arima(df.ts.modelset.train.vector$InfRate,order = c(2,1,0), seasonal=list(order=c(1,1,1), period=12))
+acf(diff(df.ts.modelset.train.vector.diff$InfRate))
+pacf(diff(df.ts.modelset.train.vector.diff$InfRate))
+arimaInfRate <- arima(df.ts.modelset.train.vector.diff$InfRate,order = c(2,0,0), seasonal=list(order=c(1,0,1), period=12))
 Box.test(arimaInfRate$residuals)
 ```
 
 ```{r}
-acf(diff(df.ts.modelset.train.vector$IndPro))
-pacf(diff(df.ts.modelset.train.vector$IndPro))
-arimaIndPro <- arima(df.ts.modelset.train.vector$IndPro,order = c(2,1,2))
+acf(diff(df.ts.modelset.train.vector.diff$IndPro))
+pacf(diff(df.ts.modelset.train.vector.diff$IndPro))
+arimaIndPro <- arima(df.ts.modelset.train.vector.diff$IndPro,order = c(2,0,2))
 Box.test(arimaIndPro$residuals)
 ```
 
 ```{r}
-acf(diff(df.ts.modelset.train.vector$M2))
-pacf(diff(df.ts.modelset.train.vector$M2))
-arimaM2 <- arima(df.ts.modelset.train.vector$M2,order = c(1,1,1), seasonal=list(order=c(1,1,1), period=12))
+acf(diff(df.ts.modelset.train.vector.diff$M2))
+pacf(diff(df.ts.modelset.train.vector.diff$M2))
+arimaM2 <- arima(df.ts.modelset.train.vector.diff$M2,order = c(1,0,0), seasonal=list(order=c(1,0,0), period=12))
 Box.test(arimaM2$residuals)
 ```
 
 ```{r}
-acf(diff(df.ts.modelset.train.vector$UnempRate))
-pacf(diff(df.ts.modelset.train.vector$UnempRate))
-arimaUnempRate <- arima(df.ts.modelset.train.vector$UnempRate,order = c(2,1,2))
+acf(diff(df.ts.modelset.train.vector.diff$UnempRate))
+pacf(diff(df.ts.modelset.train.vector.diff$UnempRate))
+arimaUnempRate <- arima(df.ts.modelset.train.vector.diff$UnempRate,order = c(2,1,2))
 Box.test(arimaUnempRate$residuals)
 ```
 
 ```{r}
-df.ts.modelset.train.vector.prewhite <- df.ts.modelset.train.vector %>%
+df.ts.modelset.train.vector.prewhite <- df.ts.modelset.train.vector.diff %>%
   mutate(
     TBillClose = arimaTBillClose$residuals,
     GDP = arimaGDP$residuals,
@@ -1251,47 +1257,57 @@ df.ts.modelset.train.vector.prewhite <- df.ts.modelset.train.vector %>%
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$TBillClose)
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$GDP)
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$InfRate)
-ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$IndPro) # b = 3, r = 2, s = 7
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$IndPro) 
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$M2)
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$UnempRate)
 ```
 
-## PREDICTING MONEY SUPPLY:
+############
 
 ```{r}
-Box.test(arima111$residuals)
-```
+X <- df.ts.modelset.train.vector.prewhite$InfRate- mean(df.ts.modelset.train.vector.prewhite$InfRate)
+Y <- df.ts.modelset.train.vector.prewhite$IIPI - mean(df.ts.modelset.train.vector.prewhite$IIPI)
 
-
-```{r}
-X <- arima111$residuals[2:423]- mean(arima111$residuals)
-Y <- diff(df.ts.modelset.train$M2) - mean(diff(df.ts.modelset.train$M2))
-
-acf(arima111$residuals[2:423])
-acf(diff(df.ts.modelset.train$M2))
-
-m<-arimax(Y, order=c(1,0,0), fixed=c(0,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA), xtransf=data.frame(X), transfer=list(c(2,10)), include.mean = FALSE)
+m<-arimax(Y, order=c(1,0,0), fixed=c(0,NA), xtransf=data.frame(X), transfer=list(c(0,0)), include.mean = FALSE)
 m
 acf(m$residuals, na.action = na.pass)
+pacf(m$residuals, na.action = na.pass)
 Box.test(m$residuals)
 ```
 
 ```{r}
-m_arima_resid<-arimax(Y, order = c(1,0,0), seasonal=list(order=c(1,0,0), period=12), xtransf=data.frame(X), transfer=list(c(2,10)), include.mean = FALSE)
+m_arima_resid<-arimax(Y, order = c(1,0,1), xtransf=data.frame(X), transfer=list(c(0,0)), include.mean = FALSE)
 m_arima_resid
 Box.test(m_arima_resid$residuals)
 ```
 
+###############
+
+
 ```{r}
-pred.tf <- (Y-m_arima_resid$residuals + mean(diff(df.ts.modelset.train$M2))) + df.ts.modelset.train$M2[2:423]
+X_b2 <- df.ts.modelset.train.vector.prewhite$IndPro[1:421]- mean(df.ts.modelset.train.vector.prewhite$IndPro)
+Y_b2 <- df.ts.modelset.train.vector.prewhite$IIPI[3:423] - mean(df.ts.modelset.train.vector.prewhite$IIPI)
+
+m1<-arimax(Y_b2, order=c(1,0,0), fixed=c(0,NA,NA), xtransf=data.frame(X_b2), transfer=list(c(1,0)), include.mean = FALSE)
+m1
+acf(m1$residuals, na.action = na.pass)
+pacf(m1$residuals, na.action = na.pass)
+Box.test(m1$residuals)
 ```
 
 ```{r}
-plot(df.ts.modelset$M2[2:423], col="black", xlab = "Time", ylab = "M2")
-title("TF for M2, with ARIMA correction on residuals")
-lines(pred.tf,col="red")
-abline(v=424,col="blue", lty=5)
+m_arima11_resid<-arimax(Y_b2, order = c(1,0,1), xtransf=data.frame(X_b2), transfer=list(c(1,0)), include.mean = FALSE)
+m_arima11_resid
+Box.test(m_arima11_resid$residuals)
 ```
+
+###############
+
+
+
+
+############
+
 
 ```{r eval = FALSE}
 p_index <- list()
