@@ -23,6 +23,7 @@ library(reshape2)
 library(fGarch)
 library(doParallel)
 library(MTS)
+library(rugarch)
 ```
 
 # Initalialization 
@@ -953,6 +954,78 @@ lines(pred.arima111.garch11_1step[422:433],col="red")
 abline(v=424,col="blue", lty=5)
 ```
 
+##############################################
+##############################################
+##############################################
+
+```{r}
+p_index <- list()
+q_index <- list()
+d <- diff(df.ts.modelset.train$IIPI)
+garch_list_2 <- 
+  foreach(i=1:2) %:%
+  foreach(j=0:2) %do% {
+    garch_list<-garchFit(substitute(~arma(2,0)+garch(p,q),list(p=i,q=j)),data=d, trace=FALSE, include.mean = FALSE) 
+  }
+
+garch_list_2
+```
+
+```{r}
+arima210.garch20 <- garchFit(~arma(2,0)+garch(2,0),data=diff(df.ts.modelset.train$IIPI), trace=FALSE,include.mean = FALSE)
+arima210.garch20@fit$ics['AIC']*length(diff(df.ts.modelset.train$IIPI))
+pred.arima201.garch20 <- predict(arima210.garch20, plot=TRUE)
+
+arima210.garch11 <- garchFit(~arma(2,0)+garch(1,1),data=diff(df.ts.modelset.train$IIPI), trace=FALSE,include.mean = FALSE)
+arima210.garch11@fit$ics['AIC']*length(diff(df.ts.modelset.train$IIPI))
+pred.arima210.garch11 <- predict(arima210.garch11, plot=TRUE)
+
+pred.arima210.garch11nahead <- df.ts.modelset.train$IIPI[2:423] - (arima210.garch11@residuals %>% unlist())
+pred.arima210.garch11nahead <- pred.arima210.garch11nahead %>% append(rep(df.ts.modelset.train$IIPI[423],10) - pred.arima210.garch11$meanForecast)
+```
+
+```{r}
+plot(df.ts.modelset$IIPI, col="black", xlab = "Time", ylab = "IIPI")
+title("ARIMA(2,1,0) with GARCH(1,1)")
+lines(pred.arima210.garch11nahead,col="red")
+abline(v=424,col="blue", lty=5)
+
+plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
+title("ARIMA(1,1,1) with GARCH(1,1) 1...")
+lines(pred.arima210.garch11nahead[422:433],col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+```{r}
+predictions_arimagarchtemp <- list()
+
+y = df.ts.modelset.train$IIPI
+for (i in 1:(dim(df.ts.modelset.test)[1])){
+  arimagarchtemp <- garchFit(~arma(2,0)+garch(1,1),data=diff(y), trace=FALSE)
+  predictions_arimagarchtemp[[i]] <- predict(arimagarchtemp, n.ahead = 1)$meanForecast
+  y <- y %>% append(df.ts.modelset.test[i,'IIPI']) %>% unlist()
+}
+predictions_arimagarchtemp <- predictions_arimagarchtemp %>% unlist()
+
+pred.arima210.garch11_1step <- c()
+pred.arima210.garch11_1step<- df.ts.modelset.train$IIPI[2:423] - (arima210.garch11@residuals)
+pred.arima210.garch11_1step <- pred.arima210.garch11_1step %>% append(df.ts.modelset.test$IIPI - predictions_arimagarchtemp)
+pred.arima210.garch11_1step
+```
+
+```{r}
+plot(df.ts.modelset$IIPI[423:434], col="black", xlab = "Time", ylab = "IIPI")
+title("ARIMA(1,1,1) with GARCH(1,1) 1...")
+lines(pred.arima210.garch11_1step[422:432],col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+##############################################
+##############################################
+##############################################
+
+
+
 # VARMA
 
 ```{r}
@@ -1218,6 +1291,47 @@ plot(df.ts.modelset$M2[2:423], col="black", xlab = "Time", ylab = "M2")
 title("TF for M2, with ARIMA correction on residuals")
 lines(pred.tf,col="red")
 abline(v=424,col="blue", lty=5)
+```
+
+```{r eval = FALSE}
+p_index <- list()
+q_index <- list()
+d <- diff(df.ts.modelset.train$IIPI) 
+x <- df.ts.modelset.train[2:423,] %>% select(-IIPI,-Date_form,-GDP,-IndPro) %>% as.matrix()
+
+#n=1e3; set.seed(1); x=rnorm(n); set.seed(2); y=rnorm(n); set.seed(3); z=rnorm(n)
+spec = ugarchspec(mean.model = list(armaOrder = c(3, 0), external.regressors = cbind(x)))
+fit = ugarchfit(spec = spec, data = d)
+```
+
+```{r}
+temp <- ugarchforecast(fit, n.ahead = 10)
+```
+
+```{r}
+pred.fit <- df.ts.modelset.train[2:423,"IIPI"] - fit@fit$residuals %>% unlist()
+pred.fit <- pred.fit$IIPI %>% append(rep(df.ts.modelset.test$IIPI[10],10) - temp@forecast$seriesFor)
+```
+
+```{r}
+predictions_regressionarimagarchtemp <- list()
+d <- df.ts.modelset.train$IIPI
+x <- df.ts.modelset.train[2:423,] %>% select(-IIPI,-Date_form,-GDP,-IndPro) %>% as.matrix()
+
+ 
+for (i in 1:(dim(df.ts.modelset.test)[1])){
+  spec = ugarchspec(mean.model = list(armaOrder = c(3, 0), external.regressors = cbind(x)))
+  arimagarchtemp <- ugarchfit(spec = spec, data = diff(d))
+  predictions_regressionarimagarchtemp[[i]] <- ugarchforecast(arimagarchtemp, n.ahead = 1)@forecast$seriesFor
+  d <- d %>% append(df.ts.modelset.test[i,'IIPI']) %>% unlist()
+  x <- x %>% rbind(df.ts.modelset.train[i,] %>% select(-IIPI,-Date_form,-GDP,-IndPro) %>% as.matrix())
+}
+predictions_regressionarimagarchtemp <- predictions_regressionarimagarchtemp %>% unlist()
+
+pred.reg.arima300.garch11_1step <- c()
+pred.reg.arima300.garch11_1step<- pred.fit[1:423]
+pred.reg.arima300.garch11_1step <- pred.reg.arima300.garch11_1step %>% append(df.ts.modelset.test$IIPI - predictions_regressionarimagarchtemp)
+pred.reg.arima300.garch11_1step
 ```
 
 ```{r}
