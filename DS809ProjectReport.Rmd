@@ -1363,7 +1363,7 @@ acf(m$residuals, na.action = na.pass)
 Box.test(m$residuals)
 ```
 
-The model coefficients are mostly significant, based on the ratio of estimates to s.e., but the residuals of the model are not white noise and seen in the above Box-Pierce and ACF. This is corrected using ARIMA():
+The model coefficients are mostly significant, based on the ratio of estimates to s.e., but the residuals of the model are not white noise and seen in the above Box-Pierce and ACF. This is corrected using $SARIMA(1,0,0)(1,0,0)_{12}$:
 
 ```{r}
 m_arima_resid
@@ -1373,14 +1373,21 @@ m_arima_resid
 Box.test(m_arima_resid$residuals)
 ```
 
+Using this transfer function to model M2 the residuals M2 result in white noise.
 
-
-
-```
+$M2_t = \frac{\omega_0 - \omega_1B-\omega_2B^2}{1 - \delta_0B - \delta_2B^2-\delta_3B^3-\delta_4B^4-\delta_5B^5 - \delta_6B^6- \delta_7B^7-\delta_8B^8-\delta_9B^9-\delta_{10}B^{10}}$
 
 # Conclusion
 
-The choise of independent variable was unfortunately lacking...
+The choice of independent variables were unfortunately lacking in predictive value, but the excerise outlined in this project was enlightening.
+
+- Deterministic models can be made as accurate as desired within sample, but as soon as prediction is involved, the bias-variance trade off has to be accounted for.
+
+- Inducing white noise using ARIMA could typically be accomplished using arbitrarily many p or q values but at the cost of more parameters to estimate. 
+
+- N step ahead predictions are very poor typically beyond 1 step.
+
+- Sequential Prediction is 
 
 
 
