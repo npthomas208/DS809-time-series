@@ -16,6 +16,7 @@ library(tseries)
 library(ggplot2)
 library(fGarch)
 library(rugarch)
+library(knitr)
 ```
 
 # Introduction and Overview
@@ -171,11 +172,12 @@ $IIPI(`r names(mlm.ts2$coefficients)[2:length(names(mlm.ts2$coefficients))] %>% 
 kable(vif(mlm.ts2),"simple")
 ```
 
-# Model Fit Plot
+# Regression Model Fit Plot
 
 The model is fit to the first 423 observations, then ten test predictions are estimated (after the blue dotted line):
 
 *Regression Model Fit*
+
 ```{r echo = FALSE}
 #Plotting the confidence and prediction intervals
 predint =  exp(predict(mlm.ts3,df.ts.modelset,interval="prediction"))
@@ -194,7 +196,7 @@ lines(conflower,col="blue")
 lines(confupper,col="blue")
 ```
 
-# Residual Assumptions
+# Regression Residual Assumptions
 
 Before proceeding with model interpretation the regression residual assumptions must be verified:
 
@@ -206,7 +208,7 @@ Before proceeding with model interpretation the regression residual assumptions 
 
 4. $Cov((\epsilon_t,\epsilon_h|X_{1t},...,X_{kt}) = 0$ for $t \neq h$ (error terms are not autocorrelated along the time dimension)
 
-# Residual Normality
+# Regression Residual Normality
 
 The Shapiro-Wilk Test is performed to verify residual normality:
 
@@ -220,7 +222,7 @@ The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one mu
 
 The residuals are therefore not white noise. The other assumptions are verified to ensure fully rigorous analysis, however are technically unnecessary given this result. 
 
-# Residual Autocorrelation
+# Regression Residual Autocorrelation
 
 The Box-Pierce test is performed to identify if the residuals are autocorrelated: 
 
@@ -239,7 +241,7 @@ The resulting p-value is less than 0.05, therefore $H_0$ is rejected, and one mu
 acf(rstandard(mlm.ts2))
 ```
 
-# Constant Variance
+# Regression Constant Variance
 
 White's test for heteroscedasticity is performed to confirm constant variance:
 
@@ -260,6 +262,8 @@ All the residual assumptions failed for this initial regression.  The residuals 
 ```{r echo=FALSE}
 summary(mlm.ts2)
 ```
+
+# Regression Model Summary
 
 If the residual assumptions were found to be true one could interpret the coefficients displayed above. All p-values indicate significance, except the intercept and TBillClose (though the residual distribution assumptions fail making interpretation dubious).
 
@@ -320,11 +324,11 @@ acf(rstandard(dlm.ts1))
 
 # Indicator Variable Regression Model Summary
 
+None of the month indicator variables are significant.
+
 ```{r echo = FALSE}
 summary(dlm.ts1)
 ```
-
-None of the month indicator variables are significant.
 
 # Polynomial Model
 
@@ -334,21 +338,17 @@ $$IIPI(t) = \hat{\beta}_0 + \hat{\beta}_1 t + \hat{\beta}_{2}t^2 + ...+ \hat{\be
 
 $k$ was found by assessment of the adjusted R-squared values and AIC values of prospective models:
 
-*Polynomial k Search - AIC*
+*Polynomial k Search *
 
 ```{r echo=FALSE}
+par(mfrow=c(1,2))
 plot(k_list$aic_list, xlab="k",ylab="AIC")
-```
-
-*Polynomial k Search - Adj. R-squared*
-
-```{r echo=FALSE}
 plot(k_list$r2adjust,xlab="k",ylab="Adj. R-squared")
 ```
 
-The minimum AIC is found to be at $k=14$.
+# Polynomial Model Fit Plot
 
-# Polynomial Model Model Fit Plot
+The model fits the data well in-sample, but performes poorly within the prediction region.
 
 *Polynomial Fit, k=14*
 
@@ -370,10 +370,6 @@ lines(conflower,col="blue")
 lines(confupper,col="blue")
 ```
 
-The model fits the data well in-sample, but performes poorly within the prediction region.
-
-# Polynomial Model Residual Assumptions
-
 # Polynomial Model Residual Autocorrelation
 
 The Box-Pierce test is performed to identify if the residuals are autocorrelated (hypothesis outlined above): 
@@ -384,19 +380,19 @@ Box.test(rstandard(dlm.ts2))
 
 $H_0$ is rejected.  Autocorrelation is present in the series.
 
+Again, the residuals are highly autoccorrelated and non-stationary.  More work is required to better capture the inherent information contained within the IIPI series.
+
 ```{r echo = FALSE}
 acf(rstandard(dlm.ts2))
 ```
 
-Again, the residuals are highly autoccorrelated and non-stationary.  More work is required to better capture the inherent information contained within the IIPI series.
-
 # Polynomial Model Model Summary
+
+This model fits the in-sample data well but fails in the prediction region.  While many of the coefficients in the model would be significant, the residuals are not white noise, therefore their interpretation is not rigorously permitted, and is foregone.
 
 ```{r echo = FALSE}
 summary(dlm.ts2)
 ```
-
-This model fits the in-sample data well but fails in the prediction region.  While many of the coefficients in the model would be significant, the residuals are not white noise, therefore their interpretation is not rigorously permitted, and is foregone.
 
 # Harmonic Model
 
@@ -404,13 +400,14 @@ A de-trended harmonic model is estimated:
 
 $IIPI(t) = \hat{\beta}_0 + \hat{\beta}_1 t + \sum{\hat{\alpha}_isin(\frac{2\pi i}{s}t)} + \sum{\hat{\beta}_icos(\frac{2\pi i}{s}t)} + \epsilon_t$
 
-# Periodogram
+# Harmonic Model Periodogram
 
 To determine the harmonics, a periodogram is reviewed:
 
 Unfortunately, the periodogram has such high density at lower harmonics the number of peaks is not readily countable through visual inspection. Therefore, a function is used to create the model harmionic values using the top 100 harmonics identified in the Periodogram.  While this is expected to be an over estimate, the model harmonic terms are subsequently removed by evaluating that the sine and cosine pair are both not significant in the model: 
 
 *Periodogram*
+
 ```{r echo = FALSE}
 periodogram(detrend$residuals)
 ```
@@ -437,13 +434,15 @@ listgen <- function(t,j,h,s){
 trigf <- listgen(df.ts.modelset.harmonic$index,length(harmonics),harmonics,df.ts.modelset.harmonic$IIPI)
 ```
 
-# Harmonic Model Model Generation
+# Harmonic Model Generation
 
 A linear model is estimated with all 200 harmonic terms (one sine and one cosine per harmonic), and those harmonics which have an insignificant (p is greater than 0.05) coefficient terms are displayed:
 
 ```{r echo = FALSE}
 which(dlm.ts3.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
 ```
+
+# Harmonic Model Generation
 
 Then those terms which have the same harmonic numeric indicator are removed - ensuring that the full harmonic (both terms) are not significant:
 
@@ -485,13 +484,14 @@ lines(conflower,col="blue")
 lines(confupper,col="blue")
 ```
 
+*Harmonics vs. Fit Metrics*
+
 The model with 85 terms fits the in-sample data nearly perfectly (Adjusted R-squared:  0.9979). However, due to failure in the prediction region harmonic term reduction is investigated to assess if the predictive utility can be improved.
 
 The three in-sample metrics are displayed as a function of increasing harmonics:
 
-*Harmonics vs. Fit Metrics*
-
 ```{r echo = FALSE}
+par(mfrow=c(1,3))
 plot(dlm.ts.r2tlb$r2adj, xlab = "Harmonics",ylab = "Adj. R-squared")
 plot(dlm.ts.r2tlb$bic, xlab = "Harmonics",ylab = "BIC")
 plot(dlm.ts.r2tlb$aic, xlab = "Harmonics",ylab = "AIC")
@@ -547,19 +547,19 @@ lines(confupper,col="blue")
 
 Visual inspection provides that there are about 15 harmonics before there is a reduced rate of increase in adjusted R-squared. Therefore the 15 harmonic model is estimated:
 
+The Adjusted R-squared is still very high in-sample fit, (0.9784). 
+
+Terms for this model are assessed for pair-wise significance. Only two trigonometric terms (not of the same harmonic) are not significant.  Therefore this model is retained for comparison going forward.
+
 ```{r echo = FALSE}
 dlm.ts6.summary
 ```
 
-The Adjusted R-squared is still very high in-sample fit, (0.9784). 
-
-Terms for this model are assessed for pair-wise significance. Only two trigonomtric terms (not of the same harmonic) are not significant.  Therefore this model is retained for comparison going forward.
+# Harmonic Model (15)
 
 ```{r echo = FALSE}
 which(dlm.ts6.summary$coefficients[,'Pr(>|t|)']>0.05) %>% names()
 ```
-
-The model with 15 harmonics is shown below:
 
 *Harmonic Model with 15 Harmonics*
 
@@ -601,9 +601,9 @@ lines(conflower,col="blue")
 lines(confupper,col="blue")
 ```
 
-# Residual Assumptions (model with 15 harmonics)
+# Harmonic Model Residual Assumptions
 
-# Residual Autocorrelation
+# Harmonic Model Residual Autocorrelation
 
 The Box-Pierce test is performed to identify if residuals are autocorrelated for the model with 15 harmonics (hypothesis defined above): 
 
@@ -625,25 +625,25 @@ Next, Stochstic Models are estimated.
 
 Before fitting a stochastic model the series must be stationary. IIPI is not stationary, but the first difference results in stationarity with sinusoidal decay, as seen above.
 
-Having acheived stationarity, at the first difference, the ACF and PACF are reviewed to determine appropriate ARIMA model parameters:
+Having achieved stationarity, at the first difference, the ACF and PACF are reviewed to determine appropriate ARIMA model parameters:
 
 In reviewing the ACF and PACF there are three proposed reasonable ARIMA models for investigation:
 
 - ARIMA(2,1,0) due to perceived cutoff of the PACF at 2, and interpretable sinusoidal decay of the ACF.
 
-- ARIMA(0,1,5) due to perceived cutoff of the ACF at 5, and interpretable sinusoidal decay of the PACF.
+ - ARIMA(0,1,5) due to perceived cutoff of the ACF at 5, and interpretable sinusoidal decay of the PACF.
 
-- ARIMA(x,1,y) due to the perceived exponential decay of both ACF and PACF; $x,y = {0,1,2}$
+ - ARIMA(x,1,y) due to the perceived exponential decay of both ACF and PACF; $x,y = {0,1,2}$
 
 ```{r echo = FALSE}
+par(mfrow=c(1,2))
 acf(diff(df.ts.modelset$IIPI))
 pacf(diff(df.ts.modelset$IIPI))
 ```
 
+*ARIMA model AIC Heatmap*
 
 This assessment is validated using a subset search of p and q values (ARIMA(p,1,q)).  The resulting model AICs are displayed:
-
-*ARIMA model AIC Heatmap*
 
 ```{r echo=FALSE, warning = FALSE}
 ggplot(arima_table1, aes(x = p_index, y = q_index, fill = arima_aic)) + 
@@ -670,17 +670,17 @@ As can be seen above, all coefficients are signifcant for each model except $\th
 
 The ARIMA(2,1,0) and ARIMA(1,1,1) equations follow:
 
-ARIMA(2,1,0):
+# ARIMA(2,1,0):
 
 $z  = IIPI_{t} - IIPI_{t-1}$
 
 $z_{t} = \phi_{1}z_{t-1} +  \phi_{2}z_{t-2}  + \epsilon_{t}$
 
-ARIMA(1,1,1):
+# ARIMA(1,1,1):
 
 $z_{t} = \phi_{1}z_{t-1} + \epsilon_{t} - \theta_{1}\epsilon_{t-1}$
 
-# Model Fit Plots
+# ARIMA Models Fit Plots
 
 The model performs poorly when used to predict 10 values into the future.
 
@@ -722,8 +722,8 @@ lines(pred.arima1111step,col="red")
 abline(v=424,col="blue", lty=5)
 
 ```
-
-# Confirming White Noise
+ 
+# ARIMA Models Confirming White Noise
 
 The residuals are reviewed for white noise.
 
@@ -737,7 +737,7 @@ Box.test(arima111$residuals, lag=20)
 
 Both are marginally white noise based on the above Box-Pierce tests.  Success! But these models can be improved by stochastic residual correction outlined below.
 
-# Stoachastic Residual Corrections
+# Stochastic Residual Corrections
 
 The following models are reviewed in this section to assess residual correction using ARIMA on the respective resulting residuals:
 
@@ -781,11 +781,12 @@ The minimum AIC occurs at $p=3$, $q=0$. Therefore an ARIMA(3,0,0) is fit to the 
 kable(arima_table3 %>% arrange(arima_aic) %>% head(3),"simple")
 ```
 
-# Model Fit Plot
+# Stochastic Residual Correction Model Fit Plot
 
 Again, n ahead performs poorly:
 
 *Regression with ARIMA(3,0,0) n ahead*
+
 ```{r echo = FALSE}
 plot(df.ts.modelset$IIPI, col="lightgray", xlab = "Time", ylab = "IIPI")
 title("Regression with ARIMA(3,0,0) n ahead")
@@ -804,7 +805,7 @@ lines(pred.mlm.ts2.arima3001step[424:433],col="red")
 abline(v=424,col="blue", lty=5)
 ```
 
-# Model Summary
+# Stochastic Residual Correction Model Summary
 
 ```{r echo = FALSE}
 mlm.ts2.arima300
@@ -812,14 +813,17 @@ mlm.ts2.arima300
 
 All the regression coefficients become insignificant except the intercept and InfRate.
 
-# Confirming White Noise
-
-```{r echo = FALSE}
-acf(mlm.ts2.arima300$residuals)
-Box.test(mlm.ts2.arima300$residuals)
-```
+#  Stochastic Residual Correction Confirming White Noise
 
 The residuals of the regression model with ARMIA residual correction are white noise.
+
+
+```{r echo = FALSE}
+Box.test(mlm.ts2.arima300$residuals)
+acf(mlm.ts2.arima300$residuals)
+```
+
+
 
 # Stochastic Residual Correction for Harmonic Model
 
@@ -855,7 +859,7 @@ As seen in the above chart ARIMA(2,0,1) best fits the residuals.
 kable(arima_table2 %>% arrange(arima_aic) %>% head(3),"simple")
 ```
 
-# Model Fit Plot
+# Stochastic Residual Correction Model Fit Plot
 
 *15 harmonics with ARIMA(2,0,1) n ahead*
 
@@ -868,6 +872,8 @@ abline(v=424,col="blue", lty=5)
 
 Again, as expected the n ahead prediction performs poorly.
 
+... and the sequential prediction performs well.
+
 *15 harmonics with ARIMA(2,0,1) sequential*
 
 ```{r echo = FALSE}
@@ -877,13 +883,7 @@ lines(pred.dlm.ts6.arima2011step[424:433],col="red")
 abline(v=424,col="blue", lty=5)
 ```
 
-... and the sequential prediction performs well.
-
-# Model Summary
-
-```{r echo = FALSE}
-dlm.ts6.arima201
-```
+# Stochastic Residual Correction Model Summary
 
 Only one pair of harmonic terms (sin22 and cos22) have been made insignificant by this addition.
 
@@ -893,14 +893,20 @@ Harmonic Model: `r AIC(dlm.ts6)`
 
 Harmonic Model with residual ARIMA correction: `r dlm.ts6.arima201$aic`
 
-# Confirming White Noise
-
 ```{r echo = FALSE}
-acf(dlm.ts6.arima201$residuals)
-Box.test(dlm.ts6.arima201$residuals, lag=20)
+dlm.ts6.arima201
 ```
 
+# Stochastic Residual Correction Confirming White Noise
+
 Despite the correction, residuals of the model do not result in white noise.
+
+```{r echo = FALSE}
+Box.test(dlm.ts6.arima201$residuals, lag=20)
+acf(dlm.ts6.arima201$residuals)
+```
+
+
 
 # Generalized Autoregressive conditionally Heteroscedastic Model (GARCH)
 
@@ -923,11 +929,11 @@ Residuals are first checked for GARCH model potential.
 As can be seen the original ARIMA(2,1,0) model residuals are white noise, but the squared residuals are not.  This is an excellent candidate for using GARCH!
 
 ```{r echo=FALSE}
-acf(arima210$residuals)
+par(mfrow=c(1,2))
 Box.test(arima210$residuals)
-
-acf(arima210$residuals^2)
 Box.test(arima210$residuals^2)
+acf(arima210$residuals)
+acf(arima210$residuals^2)
 ```
 
 The PACF is displayed to investigate the possible GARCH order.
@@ -936,7 +942,7 @@ The PACF is displayed to investigate the possible GARCH order.
 pacf(arima210$residuals^2)
 ```
 
-# Model Summary
+# ARIMA(2,1,0) with GARCH Model Summary
 
 As a model was not immediately obvious from the ACF and PACF, a appropriate GARCH model was found by estimating a diversity of GARCH parameters using the following search code:
 
@@ -953,7 +959,7 @@ garch_list_2 <-
 garch_list_2
 ```
 
-The output is not included here for brevity, but was reviewed for best AIC, resulting in: ARIMA(2,1,0) with  GARCH(1,1):
+# ARIMA(2,1,0) with GARCH 
 
 ```{r echo=FALSE}
 arima210.garch11
@@ -961,25 +967,27 @@ arima210.garch11
 
 The mean is removed from the model and all model parameters are significant.
 
-# White noise confirmation
-
-```{r echo=FALSE}
-acf(arima210.garch11@residuals/arima210.garch11@sigma.t, main="Residuals")
-Box.test(arima210.garch11@residuals/arima210.garch11@sigma.t, lag=20)
-```
-
-```{r echo=FALSE}
-acf((arima210.garch11@residuals/arima210.garch11@sigma.t)^2, main="Residuals^2")
-Box.test((arima210.garch11@residuals/arima210.garch11@sigma.t)^2, lag=20)
-```
+# ARIMA(2,1,0) with GARCH White noise confirmation
 
 The residuals and squared residuals of this model are white noise!
+
+```{r echo=FALSE}
+par(mfrow=c(1,2))
+Box.test(arima210.garch11@residuals/arima210.garch11@sigma.t, lag=20)
+Box.test((arima210.garch11@residuals/arima210.garch11@sigma.t)^2, lag=20)
+acf(arima210.garch11@residuals/arima210.garch11@sigma.t, main="Residuals")
+acf((arima210.garch11@residuals/arima210.garch11@sigma.t)^2, main="Residuals^2")
+```
+
+# ARIMA(2,1,0) with GARCH Conditional Variance
 
 The following is the predicted conditional variance of the IIPI first-difference:
 
 ```{r echo=FALSE, warning=FALSE}
 predict(arima210.garch11, plot = TRUE)
 ```
+
+# ARIMA(2,1,0) with GARCH Model Fit
 
 As expected the n ahead prediction values tend toward the mean asymptotically:
 
@@ -989,6 +997,8 @@ title("ARIMA(2,1,0) with GARCH(1,1) n ahead")
 lines(pred.arima210.garch11nahead,col="red")
 abline(v=424,col="blue", lty=5)
 ```
+
+# ARIMA(2,1,0) with GARCH Model Fit
 
 When taking the predictions 1 step ahead, the model predicts well:
 
@@ -1006,12 +1016,14 @@ Residuals are first to checked for GARCH model potential.
 As can be seen, again similar to the ARIMA(2,1,0) model, the ARIMA(1,1,1) residuals are white noise, but the squared residuals are not.  This is an excellent candidate for using GARCH, again!
 
 ```{r echo=FALSE}
-acf(arima111$residuals)
+par(mfrow=c(1,2))
 Box.test(arima111$residuals)
-
-acf(arima111$residuals^2)
 Box.test(arima111$residuals^2)
+acf(arima111$residuals)
+acf(arima111$residuals^2)
 ```
+
+# ARIMA(1,1,1) with GARCH
 
 The PACF is displayed to investigate the possible GARCH order.
 
@@ -1019,7 +1031,7 @@ The PACF is displayed to investigate the possible GARCH order.
 pacf(arima111$residuals^2)
 ```
 
-# Model Summary
+# ARIMA(1,1,1) with GARCH Model Summary
 
 As a model was not immediately obvious from the ACF and PACF, a appropriate GARCH model was found by estimating a diversity of GARCH parameters using the following search code:
 
@@ -1036,7 +1048,7 @@ garch_list_2 <-
 garch_list_2
 ```
 
-The output is not included here for brevity, but was reviewed for best AIC, resulting in: ARIMA(1,1,1) with  GARCH(1,1)
+# ARIMA(1,1,1) with  GARCH(1,1)
 
 ```{r echo=FALSE}
 arima111.garch11
@@ -1044,25 +1056,30 @@ arima111.garch11
 
 The insignificant mean is removed from the model and all other model parameters are significant.
 
-# White noise confirmation
+# ARIMA(1,1,1) with GARCH White noise confirmation
+
+The residuals and squared residuals of this model are white noise!
 
 ```{r echo=FALSE}
-acf(arima111.garch11@residuals/arima111.garch11@sigma.t, main="Residuals")
 Box.test(arima111.garch11@residuals/arima111.garch11@sigma.t, lag=20)
-```
-
-```{r echo=FALSE}
-acf((arima111.garch11@residuals/arima111.garch11@sigma.t)^2, main="Residuals^2")
 Box.test((arima111.garch11@residuals/arima111.garch11@sigma.t)^2, lag=20)
 ```
 
-The residuals and squared residuals of this model are white noise!
+```{r echo=FALSE}
+par(mfrow=c(1,2))
+acf(arima111.garch11@residuals/arima111.garch11@sigma.t, main="Residuals")
+acf((arima111.garch11@residuals/arima111.garch11@sigma.t)^2, main="Residuals^2")
+```
+
+# ARIMA(1,1,1) with GARCH Conditional Variance
 
 The following is the predicted conditional variance of the IIPI first-difference:
 
 ```{r echo=FALSE}
 predict(arima111.garch11, plot = TRUE)
 ```
+
+# ARIMA(1,1,1) with GARCH Model Fit
 
 As expected the n ahead prediction value tends toward an asymptotic value:
 
@@ -1072,6 +1089,8 @@ title("ARIMA(1,1,1) with GARCH(1,1) n ahead")
 lines(pred.arima111.garch11nahead,col="red")
 abline(v=424,col="blue", lty=5)
 ```
+
+# ARIMA(1,1,1) with GARCH Model Fit
 
 When taking the predictions 1 step ahead, the model predicts well:
 
@@ -1089,12 +1108,14 @@ Residuals are first checked for GARCH model potential.
 As can be seen, similar to the ARIMA(2,1,0) and  ARIMA(1,1,1) models, the residuals of the regression with ARIMA(3,0,0) residuals are white noise, but the squared residuals are not.  This is again an excellent candidate for using GARCH!
 
 ```{r echo=FALSE}
-acf(mlm.ts2.arima300$residuals)
+par(mfrow=c(1,2))
 Box.test(mlm.ts2.arima300$residuals)
-
-acf(mlm.ts2.arima300$residuals^2)
 Box.test(mlm.ts2.arima300$residuals^2)
+acf(mlm.ts2.arima300$residuals)
+acf(mlm.ts2.arima300$residuals^2)
 ```
+
+# Regression with ARMIA(3,0,0) on residuals and GARCH
 
 The PACF is displayed to investigate the possible GARCH order.
 
@@ -1102,7 +1123,7 @@ The PACF is displayed to investigate the possible GARCH order.
 pacf(mlm.ts2.arima300$residuals^2)
 ```
 
-# Model Summary
+# Regression with ARMIA(3,0,0) with GARCH Model Summary
 
 As a model was not immediately obvious from the ACF and PACF, a appropriate GARCH model was assumed and estimated using the *rugarch* R library. NOTE:  for this implementation of GARCH, *fGARCH* was not used, as it did not appear to allow for inclusion of external regression parameters:
 
@@ -1126,14 +1147,16 @@ mxreg1 is through mxreg5 correspond to `r df.ts.modelset.train[2:423,] %>% selec
 
 It appears that with inclusion of the GARCH on the residuals $\phi_2$ and $\phi_3$ are no longer significant, and the only significant regressor is again InfRate (as expected based on the regression with ARIMA(3,0,0) result).  All GARCH coefficients are significant.
 
-# White noise confirmation
-
-```{r echo=FALSE}
-acf(fit@fit$residuals, main="Residuals")
-Box.test(fit@fit$residuals, lag=20)
-```
+# Regression with ARMIA(3,0,0) with GARCH White noise confirmation
 
 Interestingly, residuals of this model would not be considered white noise.
+
+```{r echo=FALSE}
+Box.test(fit@fit$residuals, lag=20)
+acf(fit@fit$residuals, main="Residuals")
+```
+
+# Regression with ARMIA(3,0,0) with GARCH Model Fit
 
 As expected the n ahead prediction value tends toward an asymptotic value:
 
@@ -1143,6 +1166,8 @@ title("Regression with ARIMA(3,0,0) then GARCH(1,1)")
 lines(pred.fit,col="red")
 abline(v=424,col="blue", lty=5)
 ```
+
+# Regression with ARMIA(3,0,0) with GARCH Modle Fit
 
 When taking the predictions 1 step ahead, the model performs much better, though not as well as the ARIMA models above:
 
@@ -1163,7 +1188,9 @@ VARMA is used to estimate systems of time series data, allowing for concurent pa
  
  - All pair-wise cross-correlation functions (CCFs) are checked for bivariate white noise.  
  
-If one variable is found to be bivariate white noise with all others, it would be removed from the subsequent VARMA model:
+If one variable is found to be bivariate white noise with all others, it would be removed from the subsequent VARMA model.
+
+# Vector Autoregressive Moving Average CCFs
 
 ```{r echo = FALSE}
 par(mfrow=c(2,2))
@@ -1173,6 +1200,8 @@ ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$InfRa
 ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$IndPro, ylab = "CCF", main = "IIPI,IndPro") # not white noise...
 ```
 
+# Vector Autoregressive Moving Average CCFs
+
 ```{r echo = FALSE}
 par(mfrow=c(2,2))
 ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$M2, ylab = "CCF", main = "IIPI,M2") # not white noise...
@@ -1180,6 +1209,8 @@ ccf(df.ts.modelset.train.vector.diff$IIPI,df.ts.modelset.train.vector.diff$Unemp
 ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$GDP, ylab = "CCF", main = "TBillClose,GDP") # not white noise...
 ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff$InfRate, ylab = "CCF", main = "TBillClose,InfRate") # not white noise...
 ```
+
+# Vector Autoregressive Moving Average CCFs
 
 ```{r echo = FALSE}
 par(mfrow=c(2,2))
@@ -1189,13 +1220,17 @@ ccf(df.ts.modelset.train.vector.diff$TBillClose,df.ts.modelset.train.vector.diff
 ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$InfRate, ylab = "CCF", main = "GDP,InfRate") # not white noise...
 ```
 
+# Vector Autoregressive Moving Average CCFs
+
 ```{r echo = FALSE}
 par(mfrow=c(2,2))
 ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$IndPro, ylab = "CCF", main = "GDP,Indrop") # not white noise...
-ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$M2, ylab = "CCF", main = "GDP,M2") # not white noise
+ccf(df.ts.modelset.train.vector.diff$M2,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "M2,UnempRate") # IS WHITE NOISE
 ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "GDP,UnempRate") # not white noise...
 ccf(df.ts.modelset.train.vector.diff$InfRate,df.ts.modelset.train.vector.diff$IndPro, ylab = "CCF", main = "InfRate,IndPro") # not white noise...
 ```
+
+# Vector Autoregressive Moving Average CCFs
 
 ```{r echo = FALSE}
 par(mfrow=c(2,2))
@@ -1205,12 +1240,14 @@ ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$M2,
 ccf(df.ts.modelset.train.vector.diff$IndPro,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "IndPro,UnempRate") # not white noise...
 ```
 
+# Vector Autoregressive Moving Average CCFs
+
+M2 would be a candidate for removal from the VARMA except that it is not bivariate white noise with GDP.  All others are clearly not bivariate white noise.
+
 ```{r echo = FALSE}
 par(mfrow=c(2,2))
-ccf(df.ts.modelset.train.vector.diff$M2,df.ts.modelset.train.vector.diff$UnempRate, ylab = "CCF", main = "M2,UnempRate") # IS WHITE NOISE
+ccf(df.ts.modelset.train.vector.diff$GDP,df.ts.modelset.train.vector.diff$M2, ylab = "CCF", main = "GDP,M2") # not white noise
 ```
-
-M2 would a candidate for removal from the VARMA except that it is not bivariate white noise with GDP.  All others are clearly not bivariate white noise.
 
 # VAR(1) Model Estimation
 
@@ -1227,7 +1264,7 @@ knitr::kable(temp_mat1, "simple")
 
 # VAR(1) Parameter Significance
 
-- Significnat if >1.96
+Significnat if >1.96
 
 ```{r echo = FALSE}
 temp_mat2 <- abs(varma1_0$coef/varma1_0$secoef)
@@ -1235,6 +1272,8 @@ colnames(temp_mat2) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Reces
 rownames(temp_mat2) <- df.ts.modelset.train[2:423,] %>% select(-Date_form,-Recession) %>% names()
 knitr::kable(temp_mat2, "simple")
 ```
+
+# VAR(1) Residual Assumptions
 
 The vectors of residuals are not white noise:
 
@@ -1244,14 +1283,20 @@ acf(varma1_0$residuals[,1], main = "IIPI")
 acf(varma1_0$residuals[,2], main = "TBillClose")
 acf(varma1_0$residuals[,3], main = "GDP")
 acf(varma1_0$residuals[,4], main = "InfRate")
+```
+
+# VAR(1) Residual Assumptions
+
+```{r echo=FALSE}
+par(mfrow=c(2,2))
 acf(varma1_0$residuals[,5], main = "IndPro")
 acf(varma1_0$residuals[,6], main = "M2")
 acf(varma1_0$residuals[,7], main = "UnempRate")
 ```
 
-# Model Fit
+# VAR(1) Model Fit of IIPI
 
-IIPI exclusively, the model fit is:
+IIPI exclusively, the model fit is nothing special when taken individually, but is useful in the generalization use case with many dependent variables of interest:
 
 ```{r echo = FALSE}
 plot(df.ts.modelset$IIPI[424:434], col="light grey", xlab = "Time", ylab = "IIPI")
@@ -1259,8 +1304,6 @@ title("VAR(1)")
 lines(pred.varma1_0.nahead,col="red")
 abline(v=424,col="blue", lty=5)
 ```
-
-NOTE: Sequential 1 step ahead is not included for comparison, as this requires re-estimating the model ten times in a loop, in consideration of computation time.  However, it is expected that it would perform better than the n ahead ($n =10$), as seen for the other ARIMA models.  VARMA would be no different in this regard.
 
 # Prediction Comparison
 
@@ -1358,21 +1401,23 @@ kable(comparetable %>% arrange(MAPE), "simple")
 
 In order to perform Transfer Function modelling:
 
-- pre-whitening must be performed on all the stationary first-differenced independent variables.  
+- pre-whitening must be performed on all the stationary independent variables.  
 
-- This is accomplished using various ARIMA models on each independent variable.  For each independent variable first-differenced ACF and PACF are displayed, then used for assessment of potential ARIMA model, then white noise is verified using Box-Pierce:
+- this is accomplished using various ARIMA models on each independent variable.  
+
+- for each independent variable first-differenced ACF and PACF are displayed, then used for assessment of potential ARIMA model, then white noise is verified using Box-Pierce:
 
 # TBillClose Pre-Whitening
 
 An ARIMA(2,0,2) is used to pre-whiten the first-differenced TBillClose, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-par(mfrow=c(2,2))
-acf(diff(df.ts.modelset.train.vector.diff$TBillClose))
-pacf(diff(df.ts.modelset.train.vector.diff$TBillClose))
 arimaTBillClose <- arima(df.ts.modelset.train.vector.diff$TBillClose,order = c(2,0,2))
 arimaTBillClose
 Box.test(arimaTBillClose$residuals)
+par(mfrow=c(1,2))
+acf(diff(df.ts.modelset.train.vector.diff$TBillClose))
+pacf(diff(df.ts.modelset.train.vector.diff$TBillClose))
 ```
 
 # GDP Pre-Whitening
@@ -1380,12 +1425,12 @@ Box.test(arimaTBillClose$residuals)
 An ARIMA(1,0,1) is used to pre-whiten the first-differenced TBillClose, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-par(mfrow=c(2,2))
-acf(diff(df.ts.modelset.train.vector.diff$GDP, lag = 3))
-pacf(diff(df.ts.modelset.train.vector.diff$GDP))
 arimaGDP <- arima(df.ts.modelset.train.vector.diff$GDP,order = c(1,0,1))
 arimaGDP
 Box.test(arimaGDP$residuals)
+par(mfrow=c(1,2))
+acf(diff(df.ts.modelset.train.vector.diff$GDP, lag = 3))
+pacf(diff(df.ts.modelset.train.vector.diff$GDP))
 ```
 
 # InfRate Pre-Whitening
@@ -1393,12 +1438,12 @@ Box.test(arimaGDP$residuals)
 A SARIMA(2,0,0)(1,0,1)$_{12}$ is used to pre-whiten the first-differenced InfRate, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-par(mfrow=c(2,2))
-acf(diff(df.ts.modelset.train.vector.diff$InfRate))
-pacf(diff(df.ts.modelset.train.vector.diff$InfRate))
 arimaInfRate <- arima(df.ts.modelset.train.vector.diff$InfRate,order = c(2,0,0), seasonal=list(order=c(1,0,1), period=12))
 arimaInfRate
 Box.test(arimaInfRate$residuals)
+par(mfrow=c(1,2))
+acf(diff(df.ts.modelset.train.vector.diff$InfRate))
+pacf(diff(df.ts.modelset.train.vector.diff$InfRate))
 ```
 
 # IndPro Pre-Whitening 
@@ -1406,12 +1451,12 @@ Box.test(arimaInfRate$residuals)
 An ARIMA(2,0,2) is used to pre-whiten the first-differenced IndPro, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-par(mfrow=c(2,2))
-acf(diff(df.ts.modelset.train.vector.diff$IndPro))
-pacf(diff(df.ts.modelset.train.vector.diff$IndPro))
 arimaIndPro <- arima(df.ts.modelset.train.vector.diff$IndPro,order = c(2,0,2))
 arimaIndPro
 Box.test(arimaIndPro$residuals)
+par(mfrow=c(1,2))
+acf(diff(df.ts.modelset.train.vector.diff$IndPro))
+pacf(diff(df.ts.modelset.train.vector.diff$IndPro))
 ```
 
 # M2 Pre-Whitening
@@ -1419,12 +1464,12 @@ Box.test(arimaIndPro$residuals)
 A SARIMA(1,0,0)(1,0,0)$_{12}$ is used to pre-whiten the first-differenced M2, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-par(mfrow=c(2,2))
-acf(diff(df.ts.modelset.train.vector.diff$M2))
-pacf(diff(df.ts.modelset.train.vector.diff$M2))
 arimaM2 <- arima(df.ts.modelset.train.vector.diff$M2,order = c(1,0,0), seasonal=list(order=c(1,0,0), period=12))
 arimaM2
 Box.test(arimaM2$residuals)
+par(mfrow=c(1,2))
+acf(diff(df.ts.modelset.train.vector.diff$M2))
+pacf(diff(df.ts.modelset.train.vector.diff$M2))
 ```
 
 # UnempRate Pre-Whitening
@@ -1432,77 +1477,77 @@ Box.test(arimaM2$residuals)
 An ARIMA(2,0,2) is used to pre-whiten the first-differenced UnempRate, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-par(mfrow=c(2,2))
-acf(diff(df.ts.modelset.train.vector.diff$UnempRate))
-pacf(diff(df.ts.modelset.train.vector.diff$UnempRate))
 arimaUnempRate <- arima(df.ts.modelset.train.vector.diff$UnempRate,order = c(2,1,2))
 arimaUnempRate
 Box.test(arimaUnempRate$residuals)
+par(mfrow=c(1,2))
+acf(diff(df.ts.modelset.train.vector.diff$UnempRate))
+pacf(diff(df.ts.modelset.train.vector.diff$UnempRate))
 ```
 
-Next the CCFs are displayed to determine $b$, $r$, $s$ values:
+# TF parameters
+
+Next the CCFs are displayed to determine if any CCF indicate reasonable $b$, $r$, $s$ values:
 
 ```{r echo = FALSE}
-par(mfrow=c(2,2))
+par(mfrow=c(2,3))
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$TBillClose, ylab = "CCF", main = "IIPI,TBillClose")
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$GDP, ylab = "CCF", main = "IIPI,GDP")
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$InfRate, ylab = "CCF", main = "IIPI,InfRate")
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$IndPro, ylab = "CCF", main = "IIPI,IndPro")
-```
-
-```{r echo = FALSE}
-par(mfrow=c(2,2))
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$M2, ylab = "CCF", main = "IIPI,M2")
 ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$UnempRate, ylab = "CCF", main = "IIPI,UnempRate")
 ```
 
-# Transfer Function on IndPro
+# CCF of IIPI, IndPro
 
-Taking IndPro as the transfer function predictor variable, and $b = 2$, $r = 1$, and $s = 0$.
+```{r}
+ccf(df.ts.modelset.train.vector.prewhite$IIPI, df.ts.modelset.train.vector.prewhite$IndPro, ylab = "CCF", main = "IIPI,IndPro")
+```
+
+# Transfer Function with IndPro
+
+Taking IndPro as the transfer function predictor variable, and $b = 1$, $r = 1$, and $s = 0$.
 
 ```{r eval = FALSE}
-X_b2 <- df.ts.modelset.train.vector.prewhite$IndPro[1:421]- mean(df.ts.modelset.train.vector.prewhite$IndPro)
-Y_b2 <- df.ts.modelset.train.vector.prewhite$IIPI[3:423] - mean(df.ts.modelset.train.vector.prewhite$IIPI)
+X_b1 <- df.ts.modelset.train.vector.prewhite$IndPro[1:422]- mean(df.ts.modelset.train.vector.prewhite$IndPro)
+Y_b1 <- df.ts.modelset.train.vector.prewhite$IIPI[2:423] - mean(df.ts.modelset.train.vector.prewhite$IIPI)
 ```
 
 The transfer function is estimated, forcing the residual correction to zero first to investigate:
 
 ```{r eval = FALSE} 
-m1<-arimax(Y_b2, order=c(1,0,0), fixed=c(0,NA,NA), xtransf=data.frame(X_b2), transfer=list(c(1,0)), include.mean = FALSE)
+m2<-arimax(Y_b1, order=c(1,0,0), fixed=c(0,NA,NA), xtransf=data.frame(X_b1), transfer=list(c(1,0)), include.mean = FALSE)
+```
+
+# Transfer Function with IndPro
+
+```{r echo = FALSE}
+m2
 ```
 
 ```{r echo = FALSE}
-m1
-```
-
-The model coefficients are significant, based on the ratio of estimates to standard error.
-
-```{r echo = FALSE}
+Box.test(m2$residuals)
 par(mfrow=c(1,2))
-acf(m1$residuals, na.action = na.pass)
-pacf(m1$residuals, na.action = na.pass)
-Box.test(m1$residuals)
+acf(m2$residuals, na.action = na.pass)
+pacf(m2$residuals, na.action = na.pass)
 ```
 
 However, the residuals of the model are not white noise and seen in the above Box-Pierce and ACF. This is corrected using $ARIMA(1,0,1)$:
 
 ```{r echo = FALSE}
-m_arima11_resid
+m2_arima11_resid
 ```
 
 ```{r echo = FALSE}
-Box.test(m_arima11_resid$residuals)
+Box.test(m2_arima11_resid$residuals)
 ```
 
-The transfer function model of IIPI using IndPro lagged by two months as predictor with ARIMA(1,0,1) correction on the residuals results in white noise.  The model estimated is:
+The transfer function model of IIPI using IndPro lagged by one month as predictor with ARIMA(1,0,1) correction on the residuals results in white noise.  The model estimated is:
 
-$IIPI_t = \frac{\omega_0}{1 - \delta_1B}IndPro_{t-2} + \epsilon_t$ 
+$IIPI_t = \frac{\omega_0}{1 - \delta_1B}IndPro_{t-1} + \epsilon_t$ 
 
 # Conclusion
-
-Time series analysis is an exercise in extracting information from current and previous values of variables of interest and other predictors to allow explanation of the current or future values of a random variable.  ARIMA takes into account previous values of the dependent variable.  Transfer functions take into account previous values of independent variables.  Regression models take into account the current values of independent variables.  
-
-It is my hope that this project outlines the various strenghts of these methods and provides clear overview of the methods and thought processes undertaken to enact each model.
 
 The following Models resulted in white noise:
 
@@ -1516,7 +1561,9 @@ The following Models resulted in white noise:
 
 - ARIMA(1,1,1) with GARCH(1,1)
 
-Key project takeaways:
+- TF IndPro b=1, r=1, s=0
+
+# Key project takeaways:
 
 - The choice of independent variables were unfortunately lacking in predictive value.
 

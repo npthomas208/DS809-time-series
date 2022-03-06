@@ -1360,6 +1360,23 @@ abline(v=424,col="blue", lty=5)
 ```
 
 ```{r}
+X_b1 <- df.ts.modelset.train.vector.prewhite$IndPro[1:422]- mean(df.ts.modelset.train.vector.prewhite$IndPro)
+Y_b1 <- df.ts.modelset.train.vector.prewhite$IIPI[2:423] - mean(df.ts.modelset.train.vector.prewhite$IIPI)
+
+m2<-arimax(Y_b1, order=c(1,0,0), fixed=c(0,NA,NA), xtransf=data.frame(X_b1), transfer=list(c(1,0)), include.mean = FALSE)
+m2
+acf(m2$residuals, na.action = na.pass)
+pacf(m2$residuals, na.action = na.pass)
+Box.test(m2$residuals)
+```
+
+```{r}
+m2_arima11_resid<-arimax(Y_b1, order = c(1,0,1), xtransf=data.frame(X_b1), transfer=list(c(1,0)), include.mean = FALSE)
+m2_arima11_resid
+Box.test(m2_arima11_resid$residuals)
+```
+
+```{r}
 save.image()
 ```
 
