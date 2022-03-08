@@ -1406,8 +1406,6 @@ comparetable <- tibble(
          p = pred.fit[423:432]),
     mape(d = df.ts.modelset.test$IIPI, 
          p = pred.reg.arima300.garch11_1step[424:433])
-    ),
-  ACI = c(
     
   )
 )

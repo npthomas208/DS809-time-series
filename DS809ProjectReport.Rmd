@@ -1207,6 +1207,16 @@ acf(varma1_0$residuals[,6], main = "M2")
 acf(varma1_0$residuals[,7], main = "UnempRate")
 ```
 
+```{r}
+Box.test(varma1_0$residuals[,1], lag = 20)
+Box.test(varma1_0$residuals[,2], lag = 20)
+Box.test(varma1_0$residuals[,3], lag = 20)
+Box.test(varma1_0$residuals[,4], lag = 20)
+Box.test(varma1_0$residuals[,5], lag = 20)
+Box.test(varma1_0$residuals[,6], lag = 20)
+Box.test(varma1_0$residuals[,7], lag = 20)
+```
+
 ### Model Fit
 
 IIPI exclusively, the model fit is:
@@ -1305,11 +1315,38 @@ comparetable <- tibble(
          p = pred.fit[423:432]),
     mape(d = df.ts.modelset.test$IIPI, 
          p = pred.reg.arima300.garch11_1step[424:433])
-    )
+    ),
+  AIC = c(
+    AIC(mlm.ts2),
+    AIC(dlm.ts1),
+    AIC(dlm.ts2),
+    AIC(dlm.ts3),
+    AIC(dlm.ts4),
+    AIC(dlm.ts6), 
+    AIC(dlm.ts7),
+    arima210$aic,
+    arima111$aic,    
+    arima015$aic,
+    arima210$aic,
+    arima111$aic,
+    arima015$aic,
+    mlm.ts2.arima300$aic,
+    mlm.ts2.arima300$aic,
+    dlm.ts6.arima201$aic,
+    dlm.ts6.arima201$aic,
+    arima111.garch11@fit$ics['AIC']*length(df.ts.modelset.train$IIPI),
+    arima111.garch11@fit$ics['AIC']*length(df.ts.modelset.train$IIPI),
+    varma1_0$aic*length(df.ts.modelset.train$IIPI),
+    arima210.garch11@fit$ics['AIC']*length(df.ts.modelset.train$IIPI),
+    arima210.garch11@fit$ics['AIC']*length(df.ts.modelset.train$IIPI),
+    'Not Provided by function',
+    'Not Provided by function'
+  )
 )
 
 
 kable(comparetable %>% arrange(MAPE), "simple")
+write.csv(comparetable %>% arrange(MAPE),"comparetable.csv")
 ```
 
 # Transfer Function
