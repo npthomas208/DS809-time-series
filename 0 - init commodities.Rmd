@@ -1384,15 +1384,13 @@ Box.test(m2_arima11_resid$residuals,lag=20)
 
 
 ```{r}
-X1_b1 <- df.ts.modelset.train.vector.prewhite$IndPro[4:421]- mean(df.ts.modelset.train.vector.prewhite$IndPro)
+X1_b1 <- df.ts.modelset.train.vector.prewhite$IndPro[3:421]- mean(df.ts.modelset.train.vector.prewhite$IndPro)
 
-#X2_b1 <- df.ts.modelset.train.vector.prewhite$InfRate[4:421]- mean(df.ts.modelset.train.vector.prewhite$IndPro)
+X2_b3 <- df.ts.modelset.train.vector.prewhite$M2[1:419]- mean(df.ts.modelset.train.vector.prewhite$M2)
 
-X2_b4 <- df.ts.modelset.train.vector.prewhite$IndPro[1:418]- mean(df.ts.modelset.train.vector.prewhite$IndPro)
+Y <- df.ts.modelset.train.vector.prewhite$IIPI[4:422] - mean(df.ts.modelset.train.vector.prewhite$IIPI)
 
-Y <- df.ts.modelset.train.vector.prewhite$IIPI[5:422] - mean(df.ts.modelset.train.vector.prewhite$IIPI)
-
-m3<-arimax(Y, order=c(1,0,0), fixed=c(0,NA,NA,NA,NA,NA), xtransf=data.frame(X1_b1,X2_b4), transfer=list(c(1,0),c(2,0)), include.mean = FALSE)
+m3<-arimax(Y, order=c(1,0,0), fixed=c(0,NA,NA,NA), xtransf=data.frame(X1_b1,X2_b3), transfer=list(c(1,0),c(0,0)), include.mean = FALSE)
 ```
 
 ```{r}
@@ -1403,7 +1401,7 @@ Box.test(m3$residuals)
 ```
 
 ```{r}
-m3_arima11_resid<-arimax(Y, order=c(1,0,1), xtransf=data.frame(X1_b1,X2_b4), transfer=list(c(1,0),c(2,0)), include.mean = FALSE, method = "CSS")
+m3_arima11_resid<-arimax(Y, order=c(2,0,2), xtransf=data.frame(X1_b1,X2_b3), transfer=list(c(1,0),c(0,0)), include.mean = FALSE)
 m3_arima11_resid
 Box.test(m3_arima11_resid$residuals,lag=20)
 ```
