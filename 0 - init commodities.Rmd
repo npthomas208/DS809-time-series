@@ -406,7 +406,7 @@ vif(mlm.ts1)
 ```
 
 ```{r}
-mlm.ts2 <- lm(IIPI~., data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro)))
+mlm.ts2 <- lm(IIPI~.-1, data = df.ts.modelset.train %>% select(-c(Date_form,GDP,IndPro)))
 summary(mlm.ts2)
 ```
 
@@ -1190,6 +1190,7 @@ ccf(varma1_0$residuals[,6],varma1_0$residuals[,7])
 ```
 
 ```{r}
+varma1_0Ipred <- df.ts.modelset.train$IIPI[3:423] - varma1_0$residuals[,1]
 forecast<-VARMApred(varma1_0,h=10)
 ```
 
@@ -1298,7 +1299,7 @@ Box.test(m1$residuals)
 ```{r}
 m_arima11_resid<-arimax(Y_b2, order = c(1,0,1), xtransf=data.frame(X_b2), transfer=list(c(1,0)), include.mean = FALSE)
 m_arima11_resid
-Box.test(m_arima11_resid$residuals)
+Box.test(m_arima11_resid$residuals, lag = 20)
 ```
 
 ###############
@@ -1312,8 +1313,8 @@ Box.test(m_arima11_resid$residuals)
 ```{r eval = FALSE}
 p_index <- list()
 q_index <- list()
-d <- diff(df.ts.modelset.train$IIPI) 
-x <- df.ts.modelset.train[2:423,] %>% select(-IIPI,-Date_form,-GDP,-IndPro) %>% as.matrix()
+d <- df.ts.modelset.train$IIPI
+x <- df.ts.modelset.train[1:423,] %>% select(-IIPI,-Date_form,-GDP,-IndPro) %>% as.matrix()
 
 #n=1e3; set.seed(1); x=rnorm(n); set.seed(2); y=rnorm(n); set.seed(3); z=rnorm(n)
 spec = ugarchspec(mean.model = list(armaOrder = c(3, 0), external.regressors = cbind(x)))
@@ -1373,7 +1374,7 @@ Box.test(m2$residuals)
 ```{r}
 m2_arima11_resid<-arimax(Y_b1, order = c(1,0,1), xtransf=data.frame(X_b1), transfer=list(c(1,0)), include.mean = FALSE)
 m2_arima11_resid
-Box.test(m2_arima11_resid$residuals)
+Box.test(m2_arima11_resid$residuals,lag=20)
 ```
 
 ```{r}
