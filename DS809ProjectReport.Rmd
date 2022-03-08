@@ -291,7 +291,7 @@ lines(confupper,col="blue")
 The Box-Pierce test is performed to identify if the residuals are autocorrelated (see hypothesis definition above): 
 
 ```{r echo = FALSE}
-Box.test(rstandard(dlm.ts1))
+Box.test(rstandard(dlm.ts1), lag=20)
 ```
 
 Again, the residuals are highly autoccorrelated and non-stationary. 
@@ -361,7 +361,7 @@ The model fits the data well in-sample, but performes poorly within the predicti
 The Box-Pierce test is performed to identify if the residuals are autocorrelated (hypothesis outlined above): 
 
 ```{r echo = FALSE}
-Box.test(rstandard(dlm.ts2))
+Box.test(rstandard(dlm.ts2),lag=20)
 ```
 
 $H_0$ is rejected.  Autocorrelation is present in the series.
@@ -798,7 +798,7 @@ All the regression coefficients become insignificant except the intercept and In
 
 ```{r echo = FALSE}
 acf(mlm.ts2.arima300$residuals)
-Box.test(mlm.ts2.arima300$residuals)
+Box.test(mlm.ts2.arima300$residuals,lag=20)
 ```
 
 The residuals of the regression model with ARMIA residual correction are white noise.
@@ -906,10 +906,10 @@ Residuals are first checked for GARCH model potential:
 
 ```{r echo=FALSE}
 acf(arima210$residuals)
-Box.test(arima210$residuals)
+Box.test(arima210$residuals,lag=20)
 
 acf(arima210$residuals^2)
-Box.test(arima210$residuals^2)
+Box.test(arima210$residuals^2,lag=20)
 ```
 
 As can be seen the original ARIMA(2,1,0) model residuals are white noise, but the squared residuals are not.  This is an excellent candidate for using GARCH!
@@ -991,10 +991,10 @@ Residuals are first to checked for GARCH model potential:
 
 ```{r echo=FALSE}
 acf(arima111$residuals)
-Box.test(arima111$residuals)
+Box.test(arima111$residuals,lag=20)
 
 acf(arima111$residuals^2)
-Box.test(arima111$residuals^2)
+Box.test(arima111$residuals^2,lag=20)
 ```
 
 As can be seen, again similar to the ARIMA(2,1,0) model, the ARIMA(1,1,1) residuals are white noise, but the squared residuals are not.  This is an excellent candidate for using GARCH, again!
@@ -1076,10 +1076,10 @@ Residuals are first checked for GARCH model potential:
 
 ```{r echo=FALSE}
 acf(mlm.ts2.arima300$residuals)
-Box.test(mlm.ts2.arima300$residuals)
+Box.test(mlm.ts2.arima300$residuals, lag=20)
 
 acf(mlm.ts2.arima300$residuals^2)
-Box.test(mlm.ts2.arima300$residuals^2)
+Box.test(mlm.ts2.arima300$residuals^2, lag=20)
 ```
 
 As can be seen, similar to the ARIMA(2,1,0) and  ARIMA(1,1,1) models, the residuals of the regression with ARIMA(3,0,0) residuals are white noise, but the squared residuals are not.  This is again an excellent candidate for using GARCH!

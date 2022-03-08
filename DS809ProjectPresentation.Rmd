@@ -180,8 +180,8 @@ The model is fit to the first 423 observations, then ten test predictions are es
 
 ```{r echo = FALSE}
 #Plotting the confidence and prediction intervals
-predint =  exp(predict(mlm.ts3,df.ts.modelset,interval="prediction"))
-confint =  exp(predict(mlm.ts3,df.ts.modelset,interval="confidence"))
+predint =  predict(mlm.ts2,df.ts.modelset,interval="prediction")
+confint =  predict(mlm.ts2,df.ts.modelset,interval="confidence")
 predlower = predint[,2]
 predupper = predint[,3]
 conflower = confint[,2]
@@ -313,7 +313,7 @@ lines(confupper,col="blue")
 The Box-Pierce test is performed to identify if the residuals are autocorrelated (see hypothesis definition above): 
 
 ```{r echo = FALSE}
-Box.test(rstandard(dlm.ts1))
+Box.test(rstandard(dlm.ts1), lag=20)
 ```
 
 Again, the residuals are highly autoccorrelated and non-stationary. 
@@ -375,7 +375,7 @@ lines(confupper,col="blue")
 The Box-Pierce test is performed to identify if the residuals are autocorrelated (hypothesis outlined above): 
 
 ```{r echo = FALSE}
-Box.test(rstandard(dlm.ts2))
+Box.test(rstandard(dlm.ts2), lag=20)
 ```
 
 $H_0$ is rejected.  Autocorrelation is present in the series.
@@ -728,6 +728,10 @@ abline(v=424,col="blue", lty=5)
 The residuals are reviewed for white noise.
 
 ```{r echo = FALSE}
+Box.test(arima015$residuals, lag=20)
+```
+
+```{r echo = FALSE}
 Box.test(arima210$residuals, lag=20)
 ```
 
@@ -799,7 +803,7 @@ However as seen before, when looking at one step ahead prediction values, the pr
 *Regression with ARIMA(3,0,0) sequential - prediction region*
 
 ```{r echo = FALSE}
-plot(df.ts.modelset$IIPI[424:433], col="black", xlab = "Time", ylab = "IIPI")
+plot(df.ts.modelset$IIPI[424:433], col="black", xlab = "Time", ylab = "IIPI",ylim=c(100,140))
 title("Regression with ARIMA(3,0,0) sequential")
 lines(pred.mlm.ts2.arima3001step[424:433],col="red")
 abline(v=424,col="blue", lty=5)
@@ -819,7 +823,7 @@ The residuals of the regression model with ARMIA residual correction are white n
 
 
 ```{r echo = FALSE}
-Box.test(mlm.ts2.arima300$residuals)
+Box.test(mlm.ts2.arima300$residuals, lag=20)
 acf(mlm.ts2.arima300$residuals)
 ```
 
@@ -930,8 +934,8 @@ As can be seen the original ARIMA(2,1,0) model residuals are white noise, but th
 
 ```{r echo=FALSE}
 par(mfrow=c(1,2))
-Box.test(arima210$residuals)
-Box.test(arima210$residuals^2)
+Box.test(arima210$residuals, lag=20)
+Box.test(arima210$residuals^2, lag=20)
 acf(arima210$residuals)
 acf(arima210$residuals^2)
 ```
@@ -1017,8 +1021,8 @@ As can be seen, again similar to the ARIMA(2,1,0) model, the ARIMA(1,1,1) residu
 
 ```{r echo=FALSE}
 par(mfrow=c(1,2))
-Box.test(arima111$residuals)
-Box.test(arima111$residuals^2)
+Box.test(arima111$residuals, lag=20)
+Box.test(arima111$residuals^2, lag=20)
 acf(arima111$residuals)
 acf(arima111$residuals^2)
 ```
@@ -1109,8 +1113,8 @@ As can be seen, similar to the ARIMA(2,1,0) and  ARIMA(1,1,1) models, the residu
 
 ```{r echo=FALSE}
 par(mfrow=c(1,2))
-Box.test(mlm.ts2.arima300$residuals)
-Box.test(mlm.ts2.arima300$residuals^2)
+Box.test(mlm.ts2.arima300$residuals, lag=20)
+Box.test(mlm.ts2.arima300$residuals^2, lag=20)
 acf(mlm.ts2.arima300$residuals)
 acf(mlm.ts2.arima300$residuals^2)
 ```
@@ -1189,6 +1193,10 @@ VARMA is used to estimate systems of time series data, allowing for concurent pa
  - All pair-wise cross-correlation functions (CCFs) are checked for bivariate white noise.  
  
 If one variable is found to be bivariate white noise with all others, it would be removed from the subsequent VARMA model.
+
+```{r}
+stats::acf(df.ts.modelset.train.vector.diff)
+```
 
 # Vector Autoregressive Moving Average CCFs
 
@@ -1279,19 +1287,19 @@ The vectors of residuals are not white noise:
 
 ```{r echo=FALSE}
 par(mfrow=c(2,2))
-acf(varma1_0$residuals[,1], main = "IIPI")
-acf(varma1_0$residuals[,2], main = "TBillClose")
-acf(varma1_0$residuals[,3], main = "GDP")
-acf(varma1_0$residuals[,4], main = "InfRate")
+acf(varma1_0$residuals[,1], main = "IIPI Residuals")
+acf(varma1_0$residuals[,2], main = "TBillClose Residuals")
+acf(varma1_0$residuals[,3], main = "GDP Residuals")
+acf(varma1_0$residuals[,4], main = "InfRate Residuals")
 ```
 
 # VAR(1) Residual Assumptions
 
 ```{r echo=FALSE}
 par(mfrow=c(2,2))
-acf(varma1_0$residuals[,5], main = "IndPro")
-acf(varma1_0$residuals[,6], main = "M2")
-acf(varma1_0$residuals[,7], main = "UnempRate")
+acf(varma1_0$residuals[,5], main = "IndPro Residuals")
+acf(varma1_0$residuals[,6], main = "M Residuals2")
+acf(varma1_0$residuals[,7], main = "UnempRate Residuals")
 ```
 
 # VAR(1) Model Fit of IIPI
@@ -1299,6 +1307,14 @@ acf(varma1_0$residuals[,7], main = "UnempRate")
 IIPI exclusively, the model fit is nothing special when taken individually, but is useful in the generalization use case with many dependent variables of interest:
 
 ```{r echo = FALSE}
+
+plot(df.ts.modelset$IIPI[3:433], col="light grey", xlab = "Time", ylab = "IIPI")
+title("VAR(1), IIPI")
+lines(c(varma1_0Ipred, pred.varma1_0.nahead), col="red")
+abline(v=424,col="blue", lty=5)
+```
+
+```{r}
 plot(df.ts.modelset$IIPI[424:434], col="light grey", xlab = "Time", ylab = "IIPI")
 title("VAR(1)")
 lines(pred.varma1_0.nahead,col="red")
@@ -1390,7 +1406,10 @@ comparetable <- tibble(
          p = pred.fit[423:432]),
     mape(d = df.ts.modelset.test$IIPI, 
          p = pred.reg.arima300.garch11_1step[424:433])
-    )
+    ),
+  ACI = c(
+    
+  )
 )
 
 
@@ -1409,12 +1428,12 @@ In order to perform Transfer Function modelling:
 
 # TBillClose Pre-Whitening
 
-An ARIMA(2,0,2) is used to pre-whiten the first-differenced TBillClose, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
+An ARIMA(20,0,0) is used to pre-whiten the first-differenced TBillClose, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-arimaTBillClose <- arima(df.ts.modelset.train.vector.diff$TBillClose,order = c(2,0,2))
+arimaTBillClose <- arima(df.ts.modelset.train.vector.diff$TBillClose,order = c(20,0,0))
 arimaTBillClose
-Box.test(arimaTBillClose$residuals)
+Box.test(arimaTBillClose$residuals, lag=20)
 par(mfrow=c(1,2))
 acf(diff(df.ts.modelset.train.vector.diff$TBillClose))
 pacf(diff(df.ts.modelset.train.vector.diff$TBillClose))
@@ -1425,9 +1444,9 @@ pacf(diff(df.ts.modelset.train.vector.diff$TBillClose))
 An ARIMA(1,0,1) is used to pre-whiten the first-differenced TBillClose, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-arimaGDP <- arima(df.ts.modelset.train.vector.diff$GDP,order = c(1,0,1))
+arimaGDP <- arima(df.ts.modelset.train.vector.diff$GDP,order = c(5,0,0))
 arimaGDP
-Box.test(arimaGDP$residuals)
+Box.test(arimaGDP$residuals, lag = 20)
 par(mfrow=c(1,2))
 acf(diff(df.ts.modelset.train.vector.diff$GDP, lag = 3))
 pacf(diff(df.ts.modelset.train.vector.diff$GDP))
@@ -1438,9 +1457,9 @@ pacf(diff(df.ts.modelset.train.vector.diff$GDP))
 A SARIMA(2,0,0)(1,0,1)$_{12}$ is used to pre-whiten the first-differenced InfRate, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-arimaInfRate <- arima(df.ts.modelset.train.vector.diff$InfRate,order = c(2,0,0), seasonal=list(order=c(1,0,1), period=12))
+arimaInfRate <- arima(df.ts.modelset.train.vector.diff$InfRate,order = c(2,0,2), seasonal=list(order=c(1,0,1), period=12))
 arimaInfRate
-Box.test(arimaInfRate$residuals)
+Box.test(arimaInfRate$residuals,lag=20)
 par(mfrow=c(1,2))
 acf(diff(df.ts.modelset.train.vector.diff$InfRate))
 pacf(diff(df.ts.modelset.train.vector.diff$InfRate))
@@ -1453,7 +1472,7 @@ An ARIMA(2,0,2) is used to pre-whiten the first-differenced IndPro, and the resu
 ```{r echo = FALSE}
 arimaIndPro <- arima(df.ts.modelset.train.vector.diff$IndPro,order = c(2,0,2))
 arimaIndPro
-Box.test(arimaIndPro$residuals)
+Box.test(arimaIndPro$residuals,lag=20)
 par(mfrow=c(1,2))
 acf(diff(df.ts.modelset.train.vector.diff$IndPro))
 pacf(diff(df.ts.modelset.train.vector.diff$IndPro))
@@ -1464,9 +1483,9 @@ pacf(diff(df.ts.modelset.train.vector.diff$IndPro))
 A SARIMA(1,0,0)(1,0,0)$_{12}$ is used to pre-whiten the first-differenced M2, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-arimaM2 <- arima(df.ts.modelset.train.vector.diff$M2,order = c(1,0,0), seasonal=list(order=c(1,0,0), period=12))
+arimaM2 <- arima(df.ts.modelset.train.vector.diff$M2,order = c(16,0,0), seasonal=list(order=c(1,0,0), period=12))
 arimaM2
-Box.test(arimaM2$residuals)
+Box.test(arimaM2$residuals, lag=20)
 par(mfrow=c(1,2))
 acf(diff(df.ts.modelset.train.vector.diff$M2))
 pacf(diff(df.ts.modelset.train.vector.diff$M2))
@@ -1477,9 +1496,9 @@ pacf(diff(df.ts.modelset.train.vector.diff$M2))
 An ARIMA(2,0,2) is used to pre-whiten the first-differenced UnempRate, and the resulting residuals can be seen to be white noise based on the Box-Pierce test.
 
 ```{r echo = FALSE}
-arimaUnempRate <- arima(df.ts.modelset.train.vector.diff$UnempRate,order = c(2,1,2))
+arimaUnempRate <- arima(df.ts.modelset.train.vector.diff$UnempRate,order = c(2,0,2))
 arimaUnempRate
-Box.test(arimaUnempRate$residuals)
+Box.test(arimaUnempRate$residuals, lag=20)
 par(mfrow=c(1,2))
 acf(diff(df.ts.modelset.train.vector.diff$UnempRate))
 pacf(diff(df.ts.modelset.train.vector.diff$UnempRate))
@@ -1527,7 +1546,7 @@ m2
 ```
 
 ```{r echo = FALSE}
-Box.test(m2$residuals)
+Box.test(m2$residuals, lag = 20)
 par(mfrow=c(1,2))
 acf(m2$residuals, na.action = na.pass)
 pacf(m2$residuals, na.action = na.pass)
@@ -1540,7 +1559,7 @@ m2_arima11_resid
 ```
 
 ```{r echo = FALSE}
-Box.test(m2_arima11_resid$residuals)
+Box.test(m2_arima11_resid$residuals, lag=20)
 ```
 
 The transfer function model of IIPI using IndPro lagged by one month as predictor with ARIMA(1,0,1) correction on the residuals results in white noise.  The model estimated is:
